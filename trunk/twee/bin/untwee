@@ -1,0 +1,27 @@
+#!/usr/bin/env php
+<?php
+
+// untwee -- a utility to convert existing TiddlyWikis to Twee source code
+//
+// Usage:
+// untwee source
+//
+// Outputs to stdout.
+//
+// This code was written by Chris Klimas <klimas@gmail.com>
+// It is licensed under the GNU General Public License
+// http://www.gnu.org/copyleft/gpl.html
+
+if (PHP_VERSION < 5)
+	die('Sorry, PHP 5 is required to use this tool. You are currently ' .
+			'running ' . PHP_VERSION . ".\n\n");
+
+require_once('tiddlywiki.php');
+
+$tw = new TiddlyWiki('twee');
+$tw->addHtml(file_get_contents($argv[1]));
+
+echo $tw->toTwee();
+return true;
+
+?>
