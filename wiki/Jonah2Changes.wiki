@@ -5,6 +5,6 @@
     * MainMenu -> StoryMenu
     * DefaultTiddlers -> StartPassages
     * SiteAuthor -> StoryAuthor
-  * Instead of CustomStylesheet, you may tag any passage 'stylesheet' to have its CSS added to the document.
-  * The systemConfig tag has been renamed to 'script' to parallel 'stylesheet'.
+  * Instead of CustomStylesheet, you may tag any passage 'style' to have its CSS added to the document.
+  * The systemConfig tag has been renamed to 'script' to parallel 'style'.
   * Macros can define an 'init' method that will be called after the Jonah code has finished loading. (If you do stuff inside the macro definition itself, it may be called before the Jonah code finishes initializing.)
