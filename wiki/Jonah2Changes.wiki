@@ -1,10 +1,19 @@
-  * The <<tiddler>> macro has been renamed to <<display>>.
-  * Several passage names have changed:
-    * SiteTitle -> StoryTitle
-    * SiteSubtitle -> StorySubtitle
-    * MainMenu -> StoryMenu
-    * DefaultTiddlers -> StartPassages
-    * SiteAuthor -> StoryAuthor
-  * Instead of CustomStylesheet, you may tag any passage 'style' to have its CSS added to the document.
-  * The systemConfig tag has been renamed to 'script' to parallel 'style'.
-  * Macros can define an 'init' method that will be called after the Jonah code has finished loading. (If you do stuff inside the macro definition itself, it may be called before the Jonah code finishes initializing.)
+=Changes Readers Will Notice=
+
+  * A new look and feel ([http://gimcrackd.com/etc/src/example.html example])
+  * Readers can now rewind a story to any decision point.
+  * Bookmarking now works properly -- any variables that were set in previous passages will be remembered.
+
+=Changes for Authors=
+
+  * The {{{<<tiddler>>}}} macro has been renamed to *{{{<<display>>}}}*.
+  * *The {{{<<mask>>}}} macro has been retired.* You can now use the {{{[[text to display|passage]]}}} syntax, or {{{<<choice 'passage' 'text to display'>>}}}.
+  * Several special passage names have changed:
+    * !SiteTitle is now *!StoryTitle*.
+    * !SiteSubtitle is now *!StorySubtitle*.
+    * !MainMenu is now *!StoryMenu*.
+    * !DefaultTiddlers is now *!StartPassages*.
+    * !SiteAuthor is now *!StoryAuthor*.
+  * Instead of using a {{{CustomStylesheet}}} passage, you may *tag any passage {{{style}}} to have its CSS added to the document*.
+  * The {{{systemConfig}}} tag has been renamed to *{{{script}}}*.
+  * *Macros may now define an {{{init}}} method* that will be called after the Jonah code has finished loading. (If you do initialization inside the macro definition itself, it may be called before the Jonah code finishes initializing.)
