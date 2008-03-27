@@ -373,5 +373,7 @@ class ProjectWindow (wx.Frame):
 		self.SetStatusText('Building your story...')
 	
 		if self.project.build():
-			wx.LaunchDefaultBrowser('file://' + urllib.pathname2url(self.project.destination))	
+			path = 'file://' + urllib.pathname2url(self.project.destination)
+			path = path.replace('file://///', 'file:///')
+			wx.LaunchDefaultBrowser(path)	
 			self.SetStatusText('Your story has been successfully built.')

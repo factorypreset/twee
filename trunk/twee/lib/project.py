@@ -4,7 +4,7 @@
 # A project is a collection of source files, a target, and a destination file.
 #
 
-import sys, pickle
+import sys, os, pickle
 from tiddlywiki import TiddlyWiki
 
 class Project:
@@ -24,6 +24,7 @@ class Project:
 
 		
 	def build (self):
+		scriptPath = os.path.realpath(os.path.dirname(sys.argv[0]))
 		tw = TiddlyWiki('twee')
 		
 		dest = open(self.destination, 'w')
@@ -33,7 +34,8 @@ class Project:
 			tw.add_twee(file.read())
 			file.close()
 
-		header = open(sys.path[0] + '/targets/' + self.target + '/header.html')
+		header = open(scriptPath + os.sep + 'targets' + os.sep + \
+									self.target + os.sep + 'header.html')
 		dest.write(header.read())
 		header.close()
 		
