@@ -4,9 +4,7 @@
 # This handles the project window and menus.
 #
 
-import os
-import wx
-import urllib
+import os, wx, urllib
 from project import Project
 import tiddlywiki
 
@@ -37,6 +35,12 @@ class ProjectWindow (wx.Frame):
 
 	def __init__ (self, parent):
 	
+		# restore our config and recently-opened files
+		
+		self.config = wx.Config('Tweebox')
+		self.recentFiles = wx.FileHistory(5)
+		self.recentFiles.Load(self.config)
+	
 		# get a new Project object
 		
 		self.project = Project()
@@ -46,7 +50,7 @@ class ProjectWindow (wx.Frame):
 		# create the window
 
 		wx.Frame.__init__(self, parent, wx.ID_ANY, 'Untitled Project', \
-											size = (550, 250), style = wx.CLOSE_BOX | wx.CAPTION | wx.SYSTEM_MENU)
+						  size = (550, 250), style = wx.CLOSE_BOX | wx.CAPTION | wx.SYSTEM_MENU)
 		self.addMenus()		
 		self.addControls()
 		self.CreateStatusBar()
@@ -56,6 +60,12 @@ class ProjectWindow (wx.Frame):
 		self.Centre()
 		self.Show(True)
 		
+		# try opening the most recent project
+		
+		if self.recentFiles.GetCount() > 0:
+			self.fileName = self.recentFiles.GetHistoryFile(0)
+			self.loadFile(failLoudly = False)
+			
 		
 	def addMenus (self):
 	
@@ -74,12 +84,15 @@ class ProjectWindow (wx.Frame):
 		self.fileSaveAsItem = fileMenu.Append(ID_SAVE_PROJECT_AS, 'S&ave Project As...')
 		fileMenu.AppendSeparator()
 		self.fileQuitItem = fileMenu.Append(wx.ID_EXIT, '&Exit\tCtrl-Q')
+		self.recentFiles.UseMenu(fileMenu)
+		self.recentFiles.AddFilesToMenu()
 
 		projectMenu = wx.Menu()
 		self.projectAddItem = projectMenu.Append(ID_ADD_SOURCE, 'Add Source File...')
 		self.projectRemoveItem = projectMenu.Append(ID_REMOVE_SOURCE, 'Remove Source File')
 		projectMenu.AppendSeparator()
 		self.projectBuildItem = projectMenu.Append(ID_BUILD, '&Build Story\tCtrl-B')
+		self.projectProofItem = projectMenu.Append(ID_PROOF, '&Proof Story\tCtrl-P')
 		
 		# create menu bar
 		
@@ -101,9 +114,15 @@ class ProjectWindow (wx.Frame):
 		wx.EVT_MENU(self, ID_SAVE_PROJECT, self.onSave)
 		wx.EVT_MENU(self, ID_SAVE_PROJECT_AS, self.onSaveAs)
 		wx.EVT_MENU(self, wx.ID_EXIT, self.onQuit)
+		wx.EVT_MENU(self, wx.ID_FILE1, self.onOpenRecent)
+		wx.EVT_MENU(self, wx.ID_FILE2, self.onOpenRecent)
+		wx.EVT_MENU(self, wx.ID_FILE3, self.onOpenRecent)
+		wx.EVT_MENU(self, wx.ID_FILE4, self.onOpenRecent)
+		wx.EVT_MENU(self, wx.ID_FILE5, self.onOpenRecent)
 		wx.EVT_MENU(self, ID_ADD_SOURCE, self.onAddSource)
 		wx.EVT_MENU(self, ID_REMOVE_SOURCE, self.onRemoveSource)
 		wx.EVT_MENU(self, ID_BUILD, self.onBuild)
+		wx.EVT_MENU(self, ID_PROOF, self.onProof)
 
 
 	def addControls (self):
@@ -156,7 +175,7 @@ class ProjectWindow (wx.Frame):
 		self.targetLabel = wx.StaticText(targetPanel, wx.ID_ANY, 'Story Format:')
 
 		self.targetChoice = wx.Choice(targetPanel, ID_TARGET_CHOICE, \
-																	choices = ('Jonah', 'TiddlyWiki 2', 'TiddlyWiki 1.2'))
+									  choices = ('Sugarcane', 'Jonah', 'TiddlyWiki 2', 'TiddlyWiki 1.2'))
 		self.targetChoice.SetSelection(0)
 																																
 		wx.EVT_CHOICE(self, ID_TARGET_CHOICE, self.onChangeTarget)
@@ -183,8 +202,10 @@ class ProjectWindow (wx.Frame):
 			
 		if self.sourcesList.IsEmpty():
 			self.projectBuildItem.Enable(False)
+			self.projectProofItem.Enable(False)
 		else:
 			self.projectBuildItem.Enable(True)
+			self.projectProofItem.Enable(True)
 			
 			
 	def updateTitle (self):
@@ -213,13 +234,16 @@ class ProjectWindow (wx.Frame):
 
 			message = 'Close ' + title + ' without saving changes?'
 			dialog = wx.MessageDialog(self, message, 'Save Changes', \
-																wx.ICON_QUESTION | wx.YES_NO | wx.NO_DEFAULT)
+									  wx.ICON_QUESTION | wx.YES_NO | wx.NO_DEFAULT)
 			return (dialog.ShowModal() == wx.ID_YES)
 		else:
 			return True
 			
 
 	def targetToReadable (self, target):
+		if target == 'sugarcane':
+			return 'Sugarcane'
+		
 		if target == 'jonah':
 			return 'Jonah'
 			
@@ -231,6 +255,9 @@ class ProjectWindow (wx.Frame):
 		
 	
 	def readableToTarget (self, readable):
+		if readable == 'Sugarcane':
+			return 'sugarcane'
+		
 		if readable == 'Jonah':
 			return 'jonah'
 			
@@ -247,8 +274,8 @@ class ProjectWindow (wx.Frame):
 	def onAbout (self, event):
 		info = wx.AboutDialogInfo()
 		info.SetName('Tweebox')
-		info.SetVersion('2.0pre')
-		info.SetDescription('A tool for creating interactive stories\nwritten by Chris Klimas\n\nhttp://gimcrackd.com/etc/src/')
+		info.SetVersion('2.1')
+		info.SetDescription('\nA tool for creating interactive stories\nwritten by Chris Klimas\n\nhttp://gimcrackd.com/etc/src/')
 		info.SetCopyright('The Twee compiler and associated JavaScript files in this application are released under the GNU Public License.\n\nThe files in the targets directory are derivative works of Jeremy Ruston\'s TiddlyWiki project and are used under the terms of its license.')
 		wx.AboutBox(info)
 
@@ -272,34 +299,60 @@ class ProjectWindow (wx.Frame):
 	def onOpen (self, event):
 		if (self.closeProject()):
 			dialog = wx.FileDialog(self, 'Open Project', os.getcwd(), "", \
-													 	 "Tweebox Project (*.twp)|*.twp", \
-													 	 wx.OPEN | wx.FD_CHANGE_DIR)
+								   "Tweebox Project (*.twp)|*.twp", \
+								   wx.OPEN | wx.FD_CHANGE_DIR)
 													 	 
 			if dialog.ShowModal() == wx.ID_OK:
 				self.fileName = dialog.GetPath()
-				self.project = Project(self.fileName)
-				self.dirty = False
-				
-				# sync UI to file contents
-								
-				self.updateTitle()
-				self.updateDestination()
-				
-				self.sourcesList.Clear()
-				
-				for source in self.project.sources:
-					self.sourcesList.Append(os.path.basename(source))
-				
-				target = self.targetToReadable(self.project.target)
-				self.targetChoice.SetStringSelection(target)
+				self.loadFile()
+				self.recentFiles.AddFileToHistory(self.fileName)
 				
 			dialog.Destroy()
 				
+	def onOpenRecent (self, event):		
+		if event.GetId() == wx.ID_FILE1:
+		  index = 0
+		elif event.GetId() == wx.ID_FILE2:
+		  index = 1
+		elif event.GetId() == wx.ID_FILE3:
+		  index = 2
+		elif event.getId() == wx.ID_FILE4:
+		  index = 3
+		elif event.getId() == wx.ID_FILE5:
+		  index = 4
+			 
+		self.fileName = self.recentFiles.GetHistoryFile(index)
+		self.loadFile()
+
+	def loadFile (self, failLoudly = True):
+		try:
+			self.project = Project(self.fileName)
+		except:
+			if failLoudly:
+				wx.MessageBox('Can\'t open ' + self.fileName + '. Make sure this file has not been moved ' + \
+				  		      'or deleted, and that you are able to read files in this location.', \
+							  'Can\'t Open File', wx.ICON_ERROR)
+			return
+				
+		self.dirty = False
+		
+		# sync UI to file contents
+						
+		self.updateTitle()
+		self.updateDestination()
+		self.sourcesList.Clear()
+		
+		for source in self.project.sources:
+			self.sourcesList.Append(os.path.basename(source))
+		
+		target = self.targetToReadable(self.project.target)
+		self.targetChoice.SetStringSelection(target)		
+
 
 	def onSaveAs (self, event):
 		dialog = wx.FileDialog(self, 'Save Project', os.getcwd(), "", \
-													 "Tweebox Project (*.twp)|*.twp", \
-													 wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+							   "Tweebox Project (*.twp)|*.twp", \
+		 					   wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
 		
 		if dialog.ShowModal() == wx.ID_OK:
 			self.fileName = dialog.GetPath()
@@ -311,20 +364,26 @@ class ProjectWindow (wx.Frame):
 
 	def onSave (self, event):
 		if self.fileName != '':
-			self.project.save(self.fileName)
-			self.dirty = False
+			try:
+				self.project.save(self.fileName)
+				self.dirty = False
+			except:
+				error = wx.MessageBox('Can\'t save ' + self.fileName + '. Make sure you have enough room ' + \
+							  		  'on this disk, and that you are able to create files in this location.', \
+							  		  'Can\'t Save', wx.ICON_ERROR)
 		else:
 			self.onSaveAs(event)
 
 
 	def onQuit (self, event):
 		if self.closeProject():
+			self.recentFiles.Save(self.config)
 			self.Close(True)
 		
 
 	def onAddSource (self, event):
 		dialog = wx.FileDialog(self, 'Add Source File', os.getcwd(), "", \
-													 "Twee source code (*.tw)|*.tw|Plain text files (*.txt)|*.txt", wx.OPEN | wx.FD_CHANGE_DIR)
+							   "Twee source code (*.tw)|*.tw|Plain text files (*.txt)|*.txt", wx.OPEN | wx.FD_CHANGE_DIR)
 		
 		if dialog.ShowModal() == wx.ID_OK:
 			path = dialog.GetPath()
@@ -350,8 +409,8 @@ class ProjectWindow (wx.Frame):
 
 	def onSetDestination (self, event):
 		dialog = wx.FileDialog(self, 'Save Story As', os.getcwd(), "", \
-													 "Web Page (*.html)|*.html", \
-													 wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+	  						   "Web Page (*.html)|*.html", \
+							   wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
 		
 		if dialog.ShowModal() == wx.ID_OK:
 			path = dialog.GetPath()
@@ -363,8 +422,8 @@ class ProjectWindow (wx.Frame):
 			
 		dialog.Destroy()
 		return False		
-			
-			
+
+				
 	def onBuild (self, event):	
 		if self.project.destination == '':
 			if not self.onSetDestination(event):
@@ -377,3 +436,14 @@ class ProjectWindow (wx.Frame):
 			path = path.replace('file://///', 'file:///')
 			wx.LaunchDefaultBrowser(path)	
 			self.SetStatusText('Your story has been successfully built.')
+
+
+	def onProof (self, event):	
+		if self.project.destination == '':
+			if not self.onSetDestination(event):
+				return
+				
+		self.SetStatusText('Building proofing copy...')
+	
+		if self.project.proof():	
+			self.SetStatusText('Your proofing copy has been successfully built.')

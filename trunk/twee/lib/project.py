@@ -4,7 +4,7 @@
 # A project is a collection of source files, a target, and a destination file.
 #
 
-import sys, os, pickle
+import sys, os, pickle, re
 from tiddlywiki import TiddlyWiki
 
 class Project:
@@ -21,10 +21,9 @@ class Project:
 			self.target = saved.target
 			self.destination = saved.destination
 			file.close()
-
 		
 	def build (self):
-		scriptPath = os.path.realpath(os.path.dirname(sys.argv[0]))
+		scriptPath = os.path.realpath(sys.path[0])
 		tw = TiddlyWiki('twee')
 		
 		dest = open(self.destination, 'w')
@@ -41,6 +40,49 @@ class Project:
 		
 		dest.write(tw.to_html())
 		dest.write('</div></html>')
+		dest.close()
+		
+		return True
+
+
+	def proof (self):		
+		# preamble
+		
+		output = r'{\rtf1\ansi\ansicpg1251' + '\n'
+		output += r'{\fonttbl\f0\fswiss\fcharset0 Arial;}' + '\n'
+		output += r'{\colortbl;\red128\green128\blue128;}' + '\n'
+		output += r'\margl1440\margr1440\vieww9000\viewh8400\viewkind0' + '\n'
+		output += r'\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx792' + '\n'
+		output += r'\tx8640\ql\qnatural\pardirnatural\pgnx720\pgny720' + '\n'
+		
+		# individual source files
+		
+		for source in self.sources:
+			file = open(source)		
+			lines = file.read().split('\n')
+			
+			output += r'\f0\b\fs32' + source + r'\b0\fs20' + '\\\n\\\n' 
+			
+			for line in lines:
+				if line[:2] == '::':
+					output += r'\fs24\b' + line[2:] + r'\b0\fs20' + '\\\n'		
+				else:
+					line = re.sub(r'\[\[(.*?)\]\]', r'\ul \1\ulnone ', line)
+					line = re.sub(r'\/\/(.*?)\/\/', r'\i \1\i0 ', line)
+					line = re.sub(r'(\<\<.*?\>\>)', r'\cf1 \i \1\i0 \cf0', line)
+			
+					output += line + '\\\n'
+			
+			output += '\\\n\\\n\\\n\page'
+			file.close()
+			
+		output += '}'
+		
+		# save it
+		
+		proofDest = re.sub(r'\..*$', '.rtf', self.destination)
+		dest = open(proofDest, 'w')
+		dest.write(output)
 		dest.close()
 		
 		return True
