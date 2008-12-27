@@ -1,63 +1,44 @@
 #!/usr/bin/env python
 
-import sys
-import getopt
-import glob
-import re
-
+import sys, os, getopt, glob
+scriptPath = os.path.realpath(os.path.dirname(sys.argv[0]))
+sys.path.append(scriptPath + os.sep + 'lib')
+from project import Project
 
 def usage():
-	print 'usage: tword source1 [source2..]'
+	print 'usage: toward source1 [source2..]'
 
 
 def main (argv):	
+
+	proj = Project()
+	proj.destination = 'proof.rtf'
+
+	# arguments
+	
 	try:
-		opts, args = getopt.getopt(argv, {})
-		
+		opts, args = getopt.getopt(argv, 'o', ['output='])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
+		
+	for opt, arg in opts:
+		if (opt in ('-o', '--output')):
+			proj.destination = arg
 
-	# read source files		
-	
-	sources = []
+	# add source files to project	
 	
 	for arg in args:
 		for file in glob.glob(arg):
-			sources.append(file)
+			proj.sources.append(file)
 	
-	if len(sources) == 0:
-		print 'tword: no source files specified\n'
-		sys.exit(2)	
+	if len(proj.sources) == 0:
+		print 'toward: no source files specified\n'
+		sys.exit(2)
 	
-	output = r'{\rtf1\ansi\ansicpg1251' + '\n'
-	output += r'{\fonttbl\f0\fswiss\fcharset0 Arial;}' + '\n'
-	output += r'{\colortbl;\red128\green128\blue128;}' + '\n'
-	output += r'\margl1440\margr1440\vieww9000\viewh8400\viewkind0' + '\n'
-	output += r'\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx792' + '\n'
-	output += r'\tx8640\ql\qnatural\pardirnatural\pgnx720\pgny720' + '\n'
+	# build the proof
 	
-	for source in sources:
-		output += r'\f0\b\fs32' + source + r'\b0\fs20' + '\\\n\\\n' 
-		file = open(source)		
-		lines = file.read().split('\n')
-		
-		for line in lines:
-			if line[:2] == '::':
-				output += r'\fs24\b' + line[2:] + r'\b0\fs20' + '\\\n'		
-			else:
-				line = re.sub(r'\[\[(.*?)\]\]', r'\ul \1\ulnone ', line)
-				line = re.sub(r'\/\/(.*?)\/\/', r'\i \1\i0 ', line)
-				line = re.sub(r'(\<\<.*?\>\>)', r'\cf1 \i \1\i0 \cf0', line)
-
-				output += line + '\\\n'
-		
-		output += '\\\n\\\n\\\n\page'
-		file.close()
-		
-	output += '}'
-
-	print output
+	proj.proof()
 
 	
 if __name__ == '__main__':

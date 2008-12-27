@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 import sys, os, wx
-sys.path.append(os.getcwd() + os.sep + 'lib')
+scriptPath = os.path.realpath(os.path.dirname(sys.argv[0]))
+sys.path.append(scriptPath + os.sep + 'lib')
 import gui
 
 app = wx.PySimpleApp()
