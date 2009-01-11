@@ -61,7 +61,7 @@ class Project:
 			file = open(source)		
 			lines = file.read().split('\n')
 			
-			output += r'\f0\b\fs32' + source + r'\b0\fs20' + '\\\n\\\n' 
+			output += r'\f0\b\fs32' + os.path.basename(source) + r'\b0\fs20' + '\\\n\\\n' 
 			
 			for line in lines:
 				if line[:2] == '::':
@@ -73,7 +73,8 @@ class Project:
 			
 					output += line + '\\\n'
 			
-			output += '\\\n\\\n\\\n\page'
+			if source != self.sources[-1]:
+				output += '\\\n\\\n\\\n\page'
 			file.close()
 			
 		output += '}'
