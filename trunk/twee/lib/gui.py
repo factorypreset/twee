@@ -294,6 +294,8 @@ class ProjectWindow (wx.Frame):
 			self.fileName = ''
 			self.dirty = True
 			self.updateTitle()
+			self.updateDestination()
+			self.sourcesList.Clear()
 			
 			
 	def onOpen (self, event):
