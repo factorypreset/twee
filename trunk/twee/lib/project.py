@@ -23,7 +23,7 @@ class Project:
 			file.close()
 		
 	def build (self):
-		scriptPath = os.path.realpath(sys.path[0])
+		scriptPath = os.path.dirname(os.path.realpath(sys.path[0]))
 		tw = TiddlyWiki('twee')
 		
 		dest = open(self.destination, 'w')
