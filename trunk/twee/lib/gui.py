@@ -433,12 +433,16 @@ class ProjectWindow (wx.Frame):
 				
 		self.SetStatusText('Building your story...')
 	
-		if self.project.build():
-			path = 'file://' + urllib.pathname2url(self.project.destination)
-			path = path.replace('file://///', 'file:///')
-			wx.LaunchDefaultBrowser(path)	
-			self.SetStatusText('Your story has been successfully built.')
-
+		try:
+			if self.project.build():
+				path = 'file://' + urllib.pathname2url(self.project.destination)
+				path = path.replace('file://///', 'file:///')
+				wx.LaunchDefaultBrowser(path)	
+				self.SetStatusText('Your story has been successfully built.')
+		except:
+				error = wx.MessageBox('An error occurred while building your story (' + sys.exc_value + ').',
+									  wx.ICON_ERROR)
+				self.SetStatusText('')
 
 	def onProof (self, event):	
 		if self.project.destination == '':
@@ -447,5 +451,10 @@ class ProjectWindow (wx.Frame):
 				
 		self.SetStatusText('Building proofing copy...')
 	
-		if self.project.proof():	
-			self.SetStatusText('Your proofing copy has been successfully built.')
+		try:
+			if self.project.proof():	
+				self.SetStatusText('Your proofing copy has been successfully built.')
+		except:
+			 error = wx.MessageBox('An error occurred while building a proofing copy of your story (' +
+								   sys.exc_value + ').', wx.ICON_ERROR)
+			 self.SetStatusText('')
