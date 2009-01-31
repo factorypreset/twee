@@ -1,10 +1,10 @@
 #
-# interface.py
+# gui.py
 #
 # This handles the project window and menus.
 #
 
-import os, wx, urllib
+import os, sys, wx, urllib
 from project import Project
 import tiddlywiki
 
