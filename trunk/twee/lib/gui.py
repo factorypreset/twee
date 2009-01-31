@@ -440,9 +440,9 @@ class ProjectWindow (wx.Frame):
 				wx.LaunchDefaultBrowser(path)	
 				self.SetStatusText('Your story has been successfully built.')
 		except:
-				error = wx.MessageBox('An error occurred while building your story (' + sys.exc_value + ').',
-									  wx.ICON_ERROR)
-				self.SetStatusText('')
+			 print sys.exc_value
+			 error = wx.MessageBox('An error occurred while building your story.', wx.ICON_ERROR)
+			 self.SetStatusText('')
 
 	def onProof (self, event):	
 		if self.project.destination == '':
@@ -455,6 +455,5 @@ class ProjectWindow (wx.Frame):
 			if self.project.proof():	
 				self.SetStatusText('Your proofing copy has been successfully built.')
 		except:
-			 error = wx.MessageBox('An error occurred while building a proofing copy of your story (' +
-								   sys.exc_value + ').', wx.ICON_ERROR)
+			 error = wx.MessageBox('An error occurred while building a proofing copy of your story.', wx.ICON_ERROR)
 			 self.SetStatusText('')
