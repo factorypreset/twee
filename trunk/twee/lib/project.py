@@ -12,7 +12,7 @@ class Project:
 	def __init__ (self, path = ''):
 		if path == '':
 			self.sources = []
-			self.target = 'jonah'
+			self.target = 'sugarcane'
 			self.destination = ''
 		else:
 			file = open(path, 'r')
@@ -23,7 +23,6 @@ class Project:
 			file.close()
 		
 	def build (self):
-		scriptPath = os.path.dirname(os.path.realpath(sys.path[0]))
 		tw = TiddlyWiki('twee')
 		
 		dest = open(self.destination, 'w')
@@ -33,8 +32,7 @@ class Project:
 			tw.add_twee(file.read())
 			file.close()
 
-		header = open(scriptPath + os.sep + 'targets' + os.sep + \
-									self.target + os.sep + 'header.html')
+		header = open(self.getTargetPath() + self.target + os.sep + 'header.html')
 		dest.write(header.read())
 		header.close()
 		
@@ -93,3 +91,16 @@ class Project:
 		file = open(path, 'w')
 		pickle.dump(self, file)
 		file.close()
+
+
+	def getTargetPath(self):
+		scriptPath = os.path.realpath(sys.path[0])
+		
+		# OS X py2app'd apps will direct us right into the app bundle
+		
+		appRe = re.compile('[^/]+.app/Contents/Resources')
+		scriptPath = appRe.sub('', scriptPath)
+		
+		scriptPath += os.sep + 'targets' + os.sep
+		print scriptPath
+		return scriptPath
