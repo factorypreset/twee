@@ -50,7 +50,7 @@ class ProjectWindow (wx.Frame):
 		# create the window
 
 		wx.Frame.__init__(self, parent, wx.ID_ANY, 'Untitled Project', \
-						  size = (550, 250), style = wx.CLOSE_BOX | wx.CAPTION | wx.SYSTEM_MENU)
+						  size = (550, 250), style = wx.CLOSE_BOX | wx.CAPTION | wx.SYSTEM_MENU | wx.MINIMIZE_BOX)
 		self.addMenus()		
 		self.addControls()
 		self.CreateStatusBar()
@@ -351,6 +351,15 @@ class ProjectWindow (wx.Frame):
 		self.targetChoice.SetStringSelection(target)		
 
 
+	def displayError (self, activity):
+		exception = sys.exc_info()
+		text = 'An error occurred while ' + activity + ' ('
+		text += str(exception[1]) + ').'
+		
+		error = wx.MessageDialog(self, text, 'Error', wx.OK | wx.ICON_ERROR)
+		error.ShowModal()
+		
+
 	def onSaveAs (self, event):
 		dialog = wx.FileDialog(self, 'Save Project', os.getcwd(), "", \
 							   "Tweebox Project (*.twp)|*.twp", \
@@ -370,9 +379,7 @@ class ProjectWindow (wx.Frame):
 				self.project.save(self.fileName)
 				self.dirty = False
 			except:
-				error = wx.MessageBox('Can\'t save ' + self.fileName + '. Make sure you have enough room ' + \
-							  		  'on this disk, and that you are able to create files in this location.', \
-							  		  'Can\'t Save', wx.ICON_ERROR)
+				self.displayError('saving your project')
 		else:
 			self.onSaveAs(event)
 
@@ -440,8 +447,7 @@ class ProjectWindow (wx.Frame):
 				wx.LaunchDefaultBrowser(path)	
 				self.SetStatusText('Your story has been successfully built.')
 		except:
-			 print sys.exc_value
-			 error = wx.MessageBox('An error occurred while building your story.', wx.ICON_ERROR)
+			 self.displayError('building your story')
 			 self.SetStatusText('')
 
 	def onProof (self, event):	
@@ -455,5 +461,5 @@ class ProjectWindow (wx.Frame):
 			if self.project.proof():	
 				self.SetStatusText('Your proofing copy has been successfully built.')
 		except:
-			 error = wx.MessageBox('An error occurred while building a proofing copy of your story.', wx.ICON_ERROR)
+			 self.displayError('building a proofing copy of your story')
 			 self.SetStatusText('')
