@@ -101,6 +101,10 @@ class Project:
 		appRe = re.compile('[^/]+.app/Contents/Resources')
 		scriptPath = appRe.sub('', scriptPath)
 		
+		# Windows py2exe'd apps add an extraneous library.zip at the end
+		
+		scriptPath = scriptPath.replace('\\library.zip', '')
+		
 		scriptPath += os.sep + 'targets' + os.sep
 		print scriptPath
 		return scriptPath
