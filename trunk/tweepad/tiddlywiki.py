@@ -276,7 +276,11 @@ class Tiddler:
 			description = self.text,
 			pubDate = datetime.datetime.now()
 		)
-		
+
+	def links (self):
+		"""Returns a list of all passages linked to by this one."""
+		return re.findall(r'\[\[(.*?)\]\]', self.text)
+	
 #
 # Helper functions
 #

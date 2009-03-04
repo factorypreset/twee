@@ -22,7 +22,7 @@ class PassageWidget (wx.Panel):
         self.dragging = False
         self.logicalPos = pos
         
-        if (state):
+        if state:
             self.passage = state['passage']
             pos = self.parent.toPixels(state['pos'])
             self.selected = state['selected']
@@ -39,7 +39,7 @@ class PassageWidget (wx.Panel):
             while self.overlapsOthers():
                 self.logicalPos[0] += PassageWidget.LOGICAL_SIZE * 1.25
                 
-                if self.parent.toPixels((self.logicalPos[0],))[0] + PassageWidget.LOGICAL_SIZE > \
+                if self.parent.toPixels((self.logicalPos[0], -1))[0] + PassageWidget.LOGICAL_SIZE > \
                    self.parent.GetSize().width - self.parent.EXTRA_SPACE:
                     self.logicalPos[0] = originalX
                     self.logicalPos[1] += PassageWidget.LOGICAL_SIZE * 1.25
@@ -58,6 +58,7 @@ class PassageWidget (wx.Panel):
         self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
         self.Bind(wx.EVT_LEFT_UP, self.handleClick)
         self.Bind(wx.EVT_LEFT_DCLICK, self.openEditor)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)  
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, lambda e: self.Refresh())
         
@@ -66,11 +67,11 @@ class PassageWidget (wx.Panel):
     
     def getLogicalSize (self):
         """Returns this instance's logical size."""
-        return ((PassageWidget.LOGICAL_SIZE, PassageWidget.LOGICAL_SIZE))
+        return (PassageWidget.LOGICAL_SIZE, PassageWidget.LOGICAL_SIZE)
     
     def getLogicalPos (self):
         """Returns this instance's logical position."""
-        return self.logicalPos
+        return self.logicalPos        
         
     def getPixelSize (self):
         """Returns this instance's pixel dimensions based on the container's scale."""
@@ -79,12 +80,17 @@ class PassageWidget (wx.Panel):
     def getPixelPos (self):
         """Returns this instance's pixel position based on the container's scale."""
         return self.parent.toPixels(self.logicalPos)        
-    
+
+    def getPixelCenter (self):
+        """Returns this instance's center in pixel coordinates."""
+        pos = list(self.getPixelPos())
+        pos[0] += self.getPixelSize()[0] / 2
+        pos[1] += self.getPixelSize()[1] / 2
+        return pos
+ 
     def setSelected (self, value, exclusive = True):
         """Sets whether this widget should be selected. Pass a false value for \
            exclusive to prevent other widgets from being deselected."""
-        print 'setting selected to ', value, exclusive
-        
         if (exclusive):
             self.parent.eachPassage(lambda i: i.setSelected(False, False))
         
@@ -92,9 +98,11 @@ class PassageWidget (wx.Panel):
         self.Refresh()
         
     def handleClick (self, event):
+        """Handles single-clicks on the widget."""
         self.setSelected(True, not event.ShiftDown())
     
     def openEditor (self, event):
+        """Opens a PassageFrame to edit this passage."""
         if (not hasattr(self, 'passageFrame')):
             self.passageFrame = PassageFrame(None, self, self.app)
         else:
@@ -103,14 +111,11 @@ class PassageWidget (wx.Panel):
             except wx._core.PyDeadObjectError:
                 # user closed the frame, so we need to recreate it
                 delattr(self, 'passageFrame')
-                self.openEditor(event)
-                
+                self.openEditor(event)                
                 
     def startDrag (self, event):
         """Starts watching mouse events during a drag operation."""
-        
-        if (not self.dragging):
-            print 'starting drag'
+        if not self.dragging:
             self.dragging = True
             self.setSelected(True, not event.ShiftDown())
             self.dragOrigin = event.GetPosition()
@@ -128,14 +133,13 @@ class PassageWidget (wx.Panel):
         
     def followMouse (self, scope, event):
         """Updates position during a drag operation, preventing overlap with other widgets."""
-        
-        if (event.LeftIsDown()):
+        if event.LeftIsDown():
             pos = event.GetPosition()
             
             # if the event came from ourself,
             # convert coordinates to global ones
             
-            if (scope == 'self'):
+            if scope == 'self':
                 selfPosition = self.GetPosition()
                 pos.x += selfPosition.x
                 pos.y += selfPosition.y
@@ -155,14 +159,17 @@ class PassageWidget (wx.Panel):
                 self.SetCursor(self.badDragCursor)
             else:
                 self.SetCursor(self.dragCursor)
+                
+            # force connectors and widgets to be redrawn
+            
+            self.parent.Refresh()
+            self.parent.eachPassage(lambda i: i.Refresh())
         else:
-            print 'ending drag'
             self.dragging = False
             
             # snap back to original position if we're overlapping
             
             if self.overlapsOthers():
-                print 'bad drag, returning to original point'
                 self.moveTo(self.predragPosition)
             
             # clear event handlers
@@ -182,7 +189,6 @@ class PassageWidget (wx.Panel):
     def moveTo (self, pos):
         """Moves to a pixel point. This prevents a widget from going offscreen, but \
            does not check for collisions with other widgets."""
-        
         size = self.getPixelSize()
         
         parentSize = self.parent.GetSize()
@@ -195,7 +201,6 @@ class PassageWidget (wx.Panel):
         newPos[1] = min(newPos[1], parentSize.height - size[1])
         newPos[1] = max(newPos[1], 0)
 
-        print 'moving to ', pos        
         self.Move(newPos)
         self.Refresh()
         self.logicalPos = self.parent.toLogical(pos)
@@ -227,24 +232,16 @@ class PassageWidget (wx.Panel):
         size = self.getPixelSize()
         size = map(lambda i: max(i, PassageWidget.MIN_PIXEL_SIZE), size)
         pos = self.getPixelPos()
-        
-        print 'resizing to size ', size, ' pos ', pos
         self.SetDimensions(pos[0], pos[1], size[0], size[1])
-        
-    def updateLabels (self):
-        """Updates label contents based on inner passage object state."""
-        self.title.SetLabel(self.passage.title)
-        self.excerpt.SetLabel(self.passage.text[:100])
-
+    
     def paint (self, event):
         """Paints widget onscreen."""
-        
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
         size = self.GetSize()
 
         # frame
 
-        if (self.selected):
+        if self.selected:
             dc.SetPen(wx.Pen(PassageWidget.SELECTED_COLOR, 2))
         else:
             dc.SetPen(wx.Pen(PassageWidget.FRAME_COLOR, 1))
@@ -254,14 +251,14 @@ class PassageWidget (wx.Panel):
 
         # label font sizes
 
-        titleSize = self.parent.toPixels((PassageWidget.TITLE_SIZE,))[0]
+        titleSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1))[0]
         excerptSize = min(titleSize * 0.9, PassageWidget.MAX_EXCERPT_SIZE)
         titleFont = wx.Font(titleSize, wx.SWISS, wx.NORMAL, wx.BOLD, False, 'Arial')
         excerptFont = wx.Font(excerptSize, wx.SWISS, wx.NORMAL, wx.NORMAL, False, 'Arial')
 
         # label sizes
         
-        inset = self.parent.toPixels((PassageWidget.LOGICAL_SIZE / 12,))[0]
+        inset = self.parent.toPixels((PassageWidget.LOGICAL_SIZE / 12, -1))[0]
         labelSize = size
         labelSize[0] -= inset * 2
         labelSize[1] -= inset * 2
@@ -273,7 +270,7 @@ class PassageWidget (wx.Panel):
         dc.SetClippingRect((inset, inset, labelSize[0], labelSize[1]))
         dc.SetFont(titleFont)
         dc.DrawText(self.passage.title, inset, inset)
-        
+                
         # draw excerpt
 
         excerptTop = inset + titleSize + (titleSize * PassageWidget.LINE_SPACING)        
@@ -283,7 +280,7 @@ class PassageWidget (wx.Panel):
         # we split the excerpt by line, then draw them in turn
         # (we use a library to determine breaks, but have to draw the lines ourselves)
 
-        dc.SetFont(excerptFont)        
+        dc.SetFont(excerptFont)
         excerptText = wx.lib.wordwrap.wordwrap(self.passage.text, labelSize[0], dc)
 
         for line in excerptText.split("\n"):

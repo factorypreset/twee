@@ -30,6 +30,7 @@ class StoryPanel (wx.ScrolledWindow):
 
         # events
 
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, self.resize)
         self.Bind(wx.EVT_LEFT_UP, lambda i: self.eachPassage(lambda j: j.setSelected(False)))
@@ -61,16 +62,27 @@ class StoryPanel (wx.ScrolledWindow):
         return 'Untitled Passage ' + str(number)
     
     def eachPassage (self, function):
-        for i in self.passages:
-            function(i)
+        """Runs a function on every passage in the panel."""
+        for passage in self.passages:
+            function(passage)
+            
+    def findPassage (self, title):
+        """Returns a PassageWidget with the title passed. If none exists, it returns None."""
+        for passage in self.passages:
+            if passage.passage.title == title: return passage
+        return None
 
-    def toPixels (self, logicalPoints):
+    def toPixels (self, logicalPos):
         """Converts a tuple of logical coordinates to pixel coordinates."""                
-        return map(lambda i: i * self.scale, logicalPoints)
+        origin = self.GetViewStart()
+        return ((logicalPos[0] * self.scale) + origin[0], (logicalPos[1] * self.scale) + origin[0])
 
-    def toLogical (self, pixelPoints):
-        """Converts a tuple or dictionary of pixel coordinates to logical coordinates."""
-        return map(lambda i: i / self.scale, pixelPoints)
+    def toLogical (self, pixelPos):
+        """Converts a tuple of pixel coordinates to logical coordinates."""
+        origin = list(self.GetViewStart())
+        origin[0] /= self.scale
+        origin[1] /= self.scale
+        return ((pixelPos[0] / self.scale) + origin[0], (pixelPos[1] / self.scale) + origin[0])
 
     def getLogicalSize (self):
         """Returns a tuple (width, height) of the smallest rect needed to \
@@ -112,15 +124,23 @@ class StoryPanel (wx.ScrolledWindow):
         print 'scale now ', self.scale
         for i in self.passages: i.resize()
         self.resize()
-    
-    def paint (self, event):
-        """Paints container background onscreen."""
-        size = self.GetSize()
-        dc = wx.PaintDC(self)
-        dc.SetPen(wx.Pen(StoryPanel.BACKGROUND_COLOR))
-        dc.SetBrush(wx.Brush(StoryPanel.BACKGROUND_COLOR))
-        dc.DrawRectangle(0, 0, size.width, size.height)
+        self.Refresh()
 
+    def paint (self, event):
+        """Paints widget connectors onscreen."""
+        dc = wx.BufferedPaintDC(self)  
+        dc.SetBackground(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
+        dc.Clear()
+        dc.SetPen(wx.Pen(StoryPanel.CONNECTOR_COLOR))
+        
+        for widget in self.passages:
+            start = widget.getPixelCenter()
+            for link in widget.passage.links():
+                otherWidget = self.findPassage(link)
+                if otherWidget:
+                    end = otherWidget.getPixelCenter()
+                    dc.DrawLine(start[0], start[1], end[0], end[1])
+                        
     def resize (self, event = None):
         """Sets scrollbar settings based on panel size."""
         neededSize = self.toPixels(self.getLogicalSize())
@@ -146,5 +166,6 @@ class StoryPanel (wx.ScrolledWindow):
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
     BACKGROUND_COLOR = '#666666'
+    CONNECTOR_COLOR = '#0000ff'
     SCROLL_SPEED = 10
     EXTRA_SPACE = 200

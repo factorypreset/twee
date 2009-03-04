@@ -65,21 +65,27 @@ class PassageFrame (wx.Frame):
                      border = PassageFrame.SPACING)
 
         self.panel.SetSizer(allSizer)
+
+        self.syncInputs()
         
         # event bindings
+        # we need to do this AFTER setting up initial values
         
         self.titleInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.tagsInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.bodyInput.Bind(wx.EVT_TEXT, self.syncPassage)
         
-        self.syncInputs()
         self.bodyInput.SetFocus()
         self.Show(True)
 
     def syncInputs (self):
         """Updates the inputs based on the passage's state."""
+
+        print '1, ', self.widget.passage.text
         self.titleInput.SetValue(self.widget.passage.title)
+        print '2, ', self.widget.passage.text
         self.bodyInput.SetValue(self.widget.passage.text)
+        print '3, ', self.widget.passage.text
     
         tags = ''
         
