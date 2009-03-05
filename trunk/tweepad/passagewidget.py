@@ -8,6 +8,11 @@
 #
 # This must have a StoryPanel as its parent.
 #
+# See the comments on StoryPanel for more information on the
+# coordinate systems are used here. In general, you should
+# always pass methods logical coordinates, and expect back
+# logical coordinates. Use StoryPanel.toPixels() to convert.
+#
 
 import math, wx, wx.lib.wordwrap, storypanel, tiddlywiki
 from passageframe import PassageFrame
@@ -20,11 +25,12 @@ class PassageWidget (wx.Panel):
         self.parent = parent
         self.app = app
         self.dragging = False
-        self.logicalPos = pos
+        self.pos = (0, 0)
+        pos = list(pos)
         
         if state:
             self.passage = state['passage']
-            pos = self.parent.toPixels(state['pos'])
+            pos = state['pos']
             self.selected = state['selected']
         else:
             self.passage = tiddlywiki.Tiddler('')
@@ -33,18 +39,27 @@ class PassageWidget (wx.Panel):
             self.selected = False
         
             # find an empty space for us to land into
-        
-            originalX = pos[0]
+            # we 'cheat' by changing our pos property directly
+            # so that we can use intersectsAny(). At the end of
+            # the constructor, we call moveTo() anyhow.
             
-            while self.overlapsOthers():
-                self.logicalPos[0] += PassageWidget.LOGICAL_SIZE * 1.25
+            originalX = pos[0]
+            self.pos = pos
+            
+            while self.intersectsAny():
+                print 'overlaps'
+                self.pos[0] += PassageWidget.SIZE * 1.25
                 
-                if self.parent.toPixels((self.logicalPos[0], -1))[0] + PassageWidget.LOGICAL_SIZE > \
-                   self.parent.GetSize().width - self.parent.EXTRA_SPACE:
-                    self.logicalPos[0] = originalX
-                    self.logicalPos[1] += PassageWidget.LOGICAL_SIZE * 1.25
+                rightEdge = self.pos[0] + PassageWidget.SIZE
+                maxWidth = self.parent.toLogical((self.parent.GetSize().width - self.parent.EXTRA_SPACE, -1), \
+                                                 scaleOnly = True)[0]
                 
-        wx.Panel.__init__(self, parent, id, size = self.getPixelSize(), pos = self.getPixelPos())
+                if rightEdge > maxWidth:
+                        pos[0] = originalX
+                        pos[1] += PassageWidget.SIZE * 1.25
+                
+        wx.Panel.__init__(self, parent, id, size = self.parent.toPixels(self.getSize(), scaleOnly = True), \
+                          pos = self.parent.toPixels(self.pos))
                 
         # cursors
         
@@ -65,28 +80,25 @@ class PassageWidget (wx.Panel):
         self.moveTo(pos)
         self.resize()
     
-    def getLogicalSize (self):
+    def getSize (self):
         """Returns this instance's logical size."""
-        return (PassageWidget.LOGICAL_SIZE, PassageWidget.LOGICAL_SIZE)
-    
-    def getLogicalPos (self):
-        """Returns this instance's logical position."""
-        return self.logicalPos        
-        
-    def getPixelSize (self):
-        """Returns this instance's pixel dimensions based on the container's scale."""
-        return self.parent.toPixels((PassageWidget.LOGICAL_SIZE, PassageWidget.LOGICAL_SIZE))
-    
-    def getPixelPos (self):
-        """Returns this instance's pixel position based on the container's scale."""
-        return self.parent.toPixels(self.logicalPos)        
-
-    def getPixelCenter (self):
-        """Returns this instance's center in pixel coordinates."""
-        pos = list(self.getPixelPos())
-        pos[0] += self.getPixelSize()[0] / 2
-        pos[1] += self.getPixelSize()[1] / 2
+        return (PassageWidget.SIZE, PassageWidget.SIZE)
+            
+    def getCenter (self):
+        """Returns this instance's center in logical coordinates."""
+        pos = list(self.pos)
+        pos[0] += self.getSize()[0] / 2
+        pos[1] += self.getSize()[1] / 2
         return pos
+    
+    def moveTo (self, pos):
+        """
+        Moves this instance to the logical position passed. You must
+        call this instead of manipulating the pos property directly,
+        because this moves the widget to the correct pixel position as well.
+        """
+        self.pos = pos
+        self.SetPosition(self.parent.toPixels(self.pos))
  
     def setSelected (self, value, exclusive = True):
         """Sets whether this widget should be selected. Pass a false value for \
@@ -118,12 +130,12 @@ class PassageWidget (wx.Panel):
         if not self.dragging:
             self.dragging = True
             self.setSelected(True, not event.ShiftDown())
-            self.dragOrigin = event.GetPosition()
-            self.predragPosition = self.parent.toPixels(self.logicalPos)
+            self.dragOrigin = event.GetPosition() # this is relative to the widget itself
+            self.predragPosition = self.pos
             
             # grab mouse focus
             
-            self.Bind(wx.EVT_MOUSE_EVENTS, lambda e: self.followMouse('self', e))
+            self.Bind(wx.EVT_MOUSE_EVENTS, self.followMouse)
             self.CaptureMouse()
             
             # set cursor
@@ -131,46 +143,44 @@ class PassageWidget (wx.Panel):
             self.SetCursor(self.dragCursor)
             self.Refresh()
         
-    def followMouse (self, scope, event):
+    def followMouse (self, event):
         """Updates position during a drag operation, preventing overlap with other widgets."""
         if event.LeftIsDown():
+            # figure out new position in pixels
+            
             pos = event.GetPosition()
-            
-            # if the event came from ourself,
-            # convert coordinates to global ones
-            
-            if scope == 'self':
-                selfPosition = self.GetPosition()
-                pos.x += selfPosition.x
-                pos.y += selfPosition.y
+            selfPosition = self.GetPosition()
+            pos.x += selfPosition.x
+            pos.y += selfPosition.y
                                     
             # offset position by drag origin
             
             pos.x -= self.dragOrigin.x
             pos.y -= self.dragOrigin.y
-            self.logicalPos = self.parent.toLogical((pos.x, pos.y))
             
-            self.moveTo(self.parent.toPixels(self.logicalPos))
-
-            # if our new position overlaps another widget,
+            # and convert to logicals
+            
+            self.moveTo(self.parent.toLogical((pos.x, pos.y)))
+            
+            # if our new position intersects another widget,
             # give the user a 'bad drag' cursor as warning
 
-            if self.overlapsOthers():
+            if self.intersectsAny():
                 self.SetCursor(self.badDragCursor)
             else:
                 self.SetCursor(self.dragCursor)
                 
-            # force connectors and widgets to be redrawn
+            # force everything to be redrawn
             
             self.parent.Refresh()
             self.parent.eachPassage(lambda i: i.Refresh())
         else:
             self.dragging = False
             
-            # snap back to original position if we're overlapping
+            # snap back to original position if we're intersecting
             
-            if self.overlapsOthers():
-                self.moveTo(self.predragPosition)
+            if self.intersectsAny():
+                self.pos = self.predragPosition
             
             # clear event handlers
             
@@ -185,53 +195,32 @@ class PassageWidget (wx.Panel):
             
             self.parent.resize()
             self.Refresh()
-            
-    def moveTo (self, pos):
-        """Moves to a pixel point. This prevents a widget from going offscreen, but \
-           does not check for collisions with other widgets."""
-        size = self.getPixelSize()
-        
-        parentSize = self.parent.GetSize()
-        newPos = list(pos)
-        
-        # constrain to window dimensions
-        
-        newPos[0] = min(newPos[0], parentSize.width - size[0])
-        newPos[0] = max(newPos[0], 0)
-        newPos[1] = min(newPos[1], parentSize.height - size[1])
-        newPos[1] = max(newPos[1], 0)
-
-        self.Move(newPos)
-        self.Refresh()
-        self.logicalPos = self.parent.toLogical(pos)
-
-    def overlapsOthers (self):
-        """Returns whether this widget overlaps any other in the same StoryPanel."""
-        overlaps = False
+    
+    def intersectsAny (self):
+        """Returns whether this widget intersects any other in the same StoryPanel."""
+        intersects = False
         
         for widget in self.parent.passages:
             if (widget != self) and (self.intersects(widget)):
-                overlaps = True
+                intersects = True
                 break
 
-        return overlaps
+        return intersects
 
     def intersects (self, other):
         """Returns whether this widget intersects another. Note that this uses logical \
            coordinates, so you can do this without actually moving the widget onscreen."""
            
-        selfRect = wx.Rect(self.logicalPos[0], self.logicalPos[1], \
-                           PassageWidget.LOGICAL_SIZE, PassageWidget.LOGICAL_SIZE)
-        otherRect = wx.Rect(other.logicalPos[0], other.logicalPos[1], \
-                            PassageWidget.LOGICAL_SIZE, PassageWidget.LOGICAL_SIZE)
+        selfRect = wx.Rect(self.pos[0], self.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
+        otherRect = wx.Rect(other.pos[0], other.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
         return selfRect.Intersects(otherRect)
 
     def resize (self):
         """Resizes widget onscreen based on parent panel scale."""
         
-        size = self.getPixelSize()
+        size = self.parent.toPixels(self.getSize(), scaleOnly = True)
         size = map(lambda i: max(i, PassageWidget.MIN_PIXEL_SIZE), size)
-        pos = self.getPixelPos()
+        pos = self.parent.toPixels(self.pos)
         self.SetDimensions(pos[0], pos[1], size[0], size[1])
     
     def paint (self, event):
@@ -258,7 +247,7 @@ class PassageWidget (wx.Panel):
 
         # label sizes
         
-        inset = self.parent.toPixels((PassageWidget.LOGICAL_SIZE / 12, -1))[0]
+        inset = self.parent.toPixels((PassageWidget.SIZE / 12, -1), scaleOnly = True)[0]
         labelSize = size
         labelSize[0] -= inset * 2
         labelSize[1] -= inset * 2
@@ -289,10 +278,10 @@ class PassageWidget (wx.Panel):
     
     def serialize (self):
         """Returns a dictionary with state information suitable for pickling."""
-        return { 'selected': self.selected, 'pos': self.logicalPos, 'passage': self.passage }
+        return { 'selected': self.selected, 'pos': self.pos, 'passage': self.passage }
     
     MIN_PIXEL_SIZE = 10
-    LOGICAL_SIZE = 120
+    SIZE = 120
     BODY_COLOR = '#f0f0f0'
     FRAME_COLOR = '#000000'
     SELECTED_COLOR = '#0000ff'

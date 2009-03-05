@@ -80,12 +80,8 @@ class PassageFrame (wx.Frame):
 
     def syncInputs (self):
         """Updates the inputs based on the passage's state."""
-
-        print '1, ', self.widget.passage.text
         self.titleInput.SetValue(self.widget.passage.title)
-        print '2, ', self.widget.passage.text
         self.bodyInput.SetValue(self.widget.passage.text)
-        print '3, ', self.widget.passage.text
     
         tags = ''
         
@@ -102,6 +98,7 @@ class PassageFrame (wx.Frame):
         
         self.SetTitle(self.widget.passage.title)
         self.widget.Refresh()
+        self.widget.parent.Refresh()
     
     # control constants
     
