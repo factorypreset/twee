@@ -14,10 +14,10 @@ class StoryFrame (wx.Frame):
     
     def __init__(self, parent, app, pos = None, state = None):
         wx.Frame.__init__(self, parent, wx.ID_ANY, title = StoryFrame.DEFAULT_TITLE, \
-                          size = StoryFrame.DEFAULT_SIZE, pos = pos)
-        
+                          size = StoryFrame.DEFAULT_SIZE, pos = pos)     
         self.app = app
-        
+        self.parent = parent
+
         # inner state
         
         if (state):
@@ -100,7 +100,11 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, self.storyPanel.newPassage, id = StoryFrame.STORY_NEW_PASSAGE)
         
         storyMenu.Append(wx.ID_EDIT, '&Edit Passage\tCtrl-E')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedPassage(lambda i: i.openEditor(e)), id = wx.ID_EDIT)
+        
         storyMenu.Append(wx.ID_DELETE, '&Delete Passage')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedPassage(lambda i: i.delete()), id = wx.ID_DELETE)
+ 
         storyMenu.AppendSeparator()
         
         storyMenu.Append(StoryFrame.STORY_BUILD, '&Build Story...\tCtrl-B')
@@ -308,7 +312,7 @@ class StoryFrame (wx.Frame):
             bits = os.path.splitext(self.saveDestination)
             title = os.path.basename(bits[0])
 
-        self.SetTitle(title + ' - Tweepad')
+        self.SetTitle(title + ' - ' + self.app.NAME)
         
         # File menu
         

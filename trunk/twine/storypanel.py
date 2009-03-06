@@ -24,6 +24,7 @@ class StoryPanel (wx.ScrolledWindow):
     def __init__ (self, parent, app, id = wx.ID_ANY, state = None):
         wx.ScrolledWindow.__init__(self, parent, id)
         self.app = app
+        self.parent = parent
         
         # inner state
         
@@ -43,13 +44,14 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, self.resize)
         self.Bind(wx.EVT_LEFT_UP, lambda i: self.eachPassage(lambda j: j.setSelected(False)))
+        self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
 
-    def newPassage (self, title = None, text = ''):
+    def newPassage (self, title = None, text = '', pos = (10, 10)):
         """Adds a new PassageWidget to the container."""
         
         # calculate position
         
-        pos = self.toLogical((10, 10))
+        pos = self.toLogical(pos)
         
         # defaults
         
@@ -57,6 +59,13 @@ class StoryPanel (wx.ScrolledWindow):
         
         self.passages.append(PassageWidget(self, self.app, title = title, text = text, pos = pos))
         self.resize()
+
+    def removePassage (self, passage):
+        """
+        Removes a passage from the container. This does not actually delete it from onscreen --
+        see PassageWidget.delete() for that.
+        """
+        self.passages.remove(passage)
         
     def untitledName (self):
         """Returns a string for an untitled PassageWidget."""
@@ -72,6 +81,11 @@ class StoryPanel (wx.ScrolledWindow):
         """Runs a function on every passage in the panel."""
         for passage in self.passages:
             function(passage)
+
+    def eachSelectedPassage (self, function):
+        """Runs a function on every selected passage in the panel."""
+        for passage in self.passages:
+            if passage.selected: function(passage)
             
     def findPassage (self, title):
         """Returns a PassageWidget with the title passed. If none exists, it returns None."""
@@ -190,6 +204,17 @@ class StoryPanel (wx.ScrolledWindow):
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
     BACKGROUND_COLOR = '#666666'
-    CONNECTOR_COLOR = '#0000ff'
+    CONNECTOR_COLOR = '#000000'
     SCROLL_SPEED = 10
     EXTRA_SPACE = 200
+    
+# context menu
+
+class StoryPanelContext (wx.Menu):
+    def __init__ (self, parent, pos):
+        wx.Menu.__init__(self)
+        self.parent = parent
+        
+        newPassage = wx.MenuItem(self, wx.NewId(), 'New Passage Here')
+        self.AppendItem(newPassage)
+        self.Bind(wx.EVT_MENU, lambda e: self.parent.newPassage(pos = pos), id = newPassage.GetId())

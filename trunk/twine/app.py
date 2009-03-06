@@ -28,6 +28,8 @@ class App:
         
         scriptPath = scriptPath.replace('\\library.zip', '')
         return scriptPath
+    
+    NAME = 'Twine'
 
 # start things up if we were called directly
 

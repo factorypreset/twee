@@ -73,6 +73,7 @@ class PassageWidget (wx.Panel):
         self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
         self.Bind(wx.EVT_LEFT_UP, self.handleClick)
         self.Bind(wx.EVT_LEFT_DCLICK, self.openEditor)
+        self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(PassageWidgetContext(self), e.GetPosition()))
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)  
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, lambda e: self.Refresh())
@@ -124,7 +125,12 @@ class PassageWidget (wx.Panel):
                 # user closed the frame, so we need to recreate it
                 delattr(self, 'passageFrame')
                 self.openEditor(event)                
-                
+
+    def delete (self, event = None):
+        """Deletes this passage from onscreen."""
+        self.parent.removePassage(self)
+        self.Destroy()
+            
     def startDrag (self, event):
         """Starts watching mouse events during a drag operation."""
         if not self.dragging:
@@ -291,3 +297,19 @@ class PassageWidget (wx.Panel):
     MAX_EXCERPT_SIZE = 10
     LINE_SPACING = 1.2
     DRAG_COLOR = '#ff0000'
+    
+# contextual menu
+
+class PassageWidgetContext (wx.Menu):
+    def __init__ (self, parent):
+        wx.Menu.__init__(self)
+        self.parent = parent
+        title = '"' + parent.passage.title + '"'
+        
+        edit = wx.MenuItem(self, wx.NewId(), 'Edit ' + title)
+        self.AppendItem(edit)
+        self.Bind(wx.EVT_MENU, self.parent.openEditor, id = edit.GetId())
+        
+        delete = wx.MenuItem(self, wx.NewId(), 'Delete ' + title)
+        self.AppendItem(delete)
+        self.Bind(wx.EVT_MENU, self.parent.delete, id = delete.GetId())

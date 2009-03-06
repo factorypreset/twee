@@ -11,6 +11,7 @@
 #
 
 import os, wx
+from fseditframe import FullscreenEditFrame
 
 class PassageFrame (wx.Frame):
     
@@ -20,17 +21,40 @@ class PassageFrame (wx.Frame):
         wx.Frame.__init__(self, parent, wx.ID_ANY, title = 'Untitled Passage', \
                           size = PassageFrame.DEFAULT_SIZE)
         
-        # toolbar
+        # Passage menu
         
-        iconPath = self.app.getPath() + os.sep + 'icons' + os.sep
+        passageMenu = wx.Menu()
         
-        self.toolbar = self.CreateToolBar()
-        self.toolbar.SetToolBitmapSize((PassageFrame.TOOLBAR_ICON_SIZE, PassageFrame.TOOLBAR_ICON_SIZE))
-        self.toolbar.AddLabelTool(PassageFrame.FULLSCREEN, 'Toggle Fullscreen', \
-                                  wx.Bitmap(iconPath + 'fullscreen.png'), \
-                                  shortHelp = PassageFrame.FULLSCREEN_TOOLTIP)
-        self.toolbar.Realize()
+        passageMenu.Append(wx.ID_CLOSE, '&Close\tCtrl-W')
+        self.Bind(wx.EVT_MENU, lambda e: self.Destroy(), id = wx.ID_CLOSE)        
         
+        passageMenu.Append(PassageFrame.PASSAGE_FULLSCREEN, 'Edit &Fullscreen\tF12')
+        self.Bind(wx.EVT_MENU, self.openFullscreen, id = PassageFrame.PASSAGE_FULLSCREEN)
+        
+        passageMenu.AppendSeparator()
+        passageMenu.Append(wx.ID_SAVE, '&Save Story\tCtrl-S')
+        self.Bind(wx.EVT_MENU, self.widget.parent.parent.save, id = wx.ID_SAVE)
+        
+        passageMenu.Append(PassageFrame.PASSAGE_REBUILD_STORY, '&Rebuild Story\tCtrl-R')
+        self.Bind(wx.EVT_MENU, self.widget.parent.parent.rebuild, id = PassageFrame.PASSAGE_REBUILD_STORY)
+        
+        # Edit menu
+        
+        editMenu = wx.Menu()
+        editMenu.Append(wx.ID_UNDO, '&Undo\tCtrl-Z')
+        editMenu.AppendSeparator()
+        editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
+        editMenu.Append(wx.ID_COPY, '&Copy\tCtrl-C')
+        editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
+        editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
+
+        # menus
+        
+        self.menus = wx.MenuBar()
+        self.menus.Append(passageMenu, '&Passage')
+        self.menus.Append(editMenu, '&Edit')
+        self.SetMenuBar(self.menus)
+
         # controls
         
         self.panel = wx.Panel(self)
@@ -100,11 +124,19 @@ class PassageFrame (wx.Frame):
         self.widget.Refresh()
         self.widget.parent.Refresh()
     
+    def openFullscreen (self, event = None):
+        """Opens a FullscreenEditFrame for this passage's body text."""
+        FullscreenEditFrame(None, title = self.widget.passage.title, initialText = self.widget.passage.text, \
+                                  callback = self.setBodyText, frame = self)
+        
+    def setBodyText (self, text):
+        """Changes the body text field directly."""
+        self.bodyInput.SetValue(text)
+    
     # control constants
     
-    SPACING = 6
-    TOOLBAR_ICON_SIZE = 22
     DEFAULT_SIZE = (550, 600)
+    SPACING = 6
     TITLE_LABEL = 'Title'
     TAGS_LABEL = 'Tags (separate with spaces)'
     
@@ -115,9 +147,10 @@ class PassageFrame (wx.Frame):
     FS_DEFAULT_FG = (179, 205, 255)
     FS_DEFAULT_BG = (16, 0, 136)
     
-    # menu constants
+    # menu constants (not defined by wx)
     
-    FULLSCREEN = 1001
+    PASSAGE_FULLSCREEN = 1002
+    PASSAGE_REBUILD_STORY = 1005
     
     # tooltip constants
     
