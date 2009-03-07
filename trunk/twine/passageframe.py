@@ -18,7 +18,7 @@ class PassageFrame (wx.Frame):
     def __init__ (self, parent, widget, app):
         self.widget = widget
         self.app = app
-        wx.Frame.__init__(self, parent, wx.ID_ANY, title = 'Untitled Passage', \
+        wx.Frame.__init__(self, parent, wx.ID_ANY, title = 'Untitled Passage - ' + self.app.NAME, \
                           size = PassageFrame.DEFAULT_SIZE)
         
         # Passage menu
@@ -84,7 +84,7 @@ class PassageFrame (wx.Frame):
         # final layout
         
         allSizer = wx.BoxSizer(wx.VERTICAL)
-        allSizer.Add(self.topControls, flag = wx.ALL | wx.EXPAND, border = PassageFrame.SPACING * 2)
+        allSizer.Add(self.topControls, flag = wx.ALL | wx.EXPAND, border = PassageFrame.SPACING)
         allSizer.Add(self.bodyInput, proportion = 1, flag = wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, \
                      border = PassageFrame.SPACING)
 
@@ -113,6 +113,7 @@ class PassageFrame (wx.Frame):
             tags += tag + ' '
             
         self.tagsInput.SetValue(tags)
+        self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
     
     def syncPassage (self, event = None):
         """Updates the passage based on the inputs; asks our matching widget to repaint."""
@@ -120,19 +121,21 @@ class PassageFrame (wx.Frame):
         self.widget.passage.text = self.bodyInput.GetValue()
         self.widget.passage.tags = list(self.tagsInput.GetValue().split(' '))
         
-        self.SetTitle(self.widget.passage.title)
+        self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
         self.widget.Refresh()
         self.widget.parent.Refresh()
     
     def openFullscreen (self, event = None):
         """Opens a FullscreenEditFrame for this passage's body text."""
-        FullscreenEditFrame(None, title = self.widget.passage.title, initialText = self.widget.passage.text, \
-                                  callback = self.setBodyText, frame = self)
+        self.Hide()
+        FullscreenEditFrame(None, title = self.widget.passage.title + ' - ' + self.app.NAME, \
+                            initialText = self.widget.passage.text, callback = self.setBodyText, frame = self)
         
     def setBodyText (self, text):
         """Changes the body text field directly."""
         self.bodyInput.SetValue(text)
-    
+        self.Show(True)
+        
     # control constants
     
     DEFAULT_SIZE = (550, 600)
@@ -142,16 +145,10 @@ class PassageFrame (wx.Frame):
     
     # appearance constants
     
-    BODY_DEFAULT_SIZE = 11
+    BODY_DEFAULT_SIZE = 10
     BODY_DEFAULT_FONT = 'Consolas'
-    FS_DEFAULT_FG = (179, 205, 255)
-    FS_DEFAULT_BG = (16, 0, 136)
     
     # menu constants (not defined by wx)
     
     PASSAGE_FULLSCREEN = 1002
     PASSAGE_REBUILD_STORY = 1005
-    
-    # tooltip constants
-    
-    FULLSCREEN_TOOLTIP = 'Toggle fullscreen view'

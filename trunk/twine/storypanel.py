@@ -137,9 +137,9 @@ class StoryPanel (wx.ScrolledWindow):
             self.scale = scale
         else:
             if (scale == 'in'):
-                self.scale += 0.25
+                self.scale += 0.2
             if (scale == 'out'):
-                self.scale -= 0.25
+                self.scale -= 0.2
             if (scale == 'fit'):
                 neededSize = self.toPixels(self.getSize(), scaleOnly = True)
                 actualSize = self.GetSize()
@@ -149,12 +149,13 @@ class StoryPanel (wx.ScrolledWindow):
                 self.scale = min(widthRatio, heightRatio)
                 self.Scroll(0, 0)
                 
-        self.scale = max(self.scale, 0)
+        self.scale = max(self.scale, 0.2)
                 
         print 'scale now ', self.scale
         for i in self.passages: i.resize()
         self.resize()
         self.Refresh()
+        self.parent.updateUI()
 
     def paint (self, event):
         """Paints widget connectors onscreen."""

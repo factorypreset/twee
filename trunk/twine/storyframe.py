@@ -6,7 +6,7 @@
 # instance of a StoryPanel, but it also has a menu bar and toolbar.
 #
 
-import wx, os, urllib, pickle
+import wx, os, math, urllib, pickle
 from tiddlywiki import TiddlyWiki
 from storypanel import StoryPanel
 
@@ -63,8 +63,13 @@ class StoryFrame (wx.Frame):
         editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
         editMenu.Append(wx.ID_COPY, '&Copy\tCtrl-C')
         editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
+        
         editMenu.Append(wx.ID_DELETE, '&Delete')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedPassage(lambda i: i.delete()), id = wx.ID_DELETE)
+
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachPassage(lambda i: i.setSelected(True, exclusive = False)), id = wx.ID_SELECTALL)
+        
         editMenu.AppendSeparator()
         editMenu.Append(wx.ID_PREFERENCES, 'Preferences...')
         
@@ -311,8 +316,10 @@ class StoryFrame (wx.Frame):
         else:
             bits = os.path.splitext(self.saveDestination)
             title = os.path.basename(bits[0])
+        
+        percent = str(int(round(self.storyPanel.scale * 100)))
 
-        self.SetTitle(title + ' - ' + self.app.NAME)
+        self.SetTitle(title + ' (' + percent + '%) - ' + self.app.NAME)
         
         # File menu
         
