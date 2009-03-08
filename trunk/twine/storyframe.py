@@ -6,7 +6,7 @@
 # instance of a StoryPanel, but it also has a menu bar and toolbar.
 #
 
-import wx, os, math, urllib, pickle
+import wx, os, locale, math, urllib, pickle
 from tiddlywiki import TiddlyWiki
 from storypanel import StoryPanel
 
@@ -37,6 +37,7 @@ class StoryFrame (wx.Frame):
         # window events
         
         self.Bind(wx.EVT_CLOSE, self.checkClose)
+        self.Bind(wx.EVT_UPDATE_UI, self.updateUI)
         
         # File menu
         
@@ -136,10 +137,14 @@ class StoryFrame (wx.Frame):
         
         storyMenu.Append(StoryFrame.STORY_REBUILD, '&Rebuild Story\tCtrl-R')
         self.Bind(wx.EVT_MENU, self.rebuild, id = StoryFrame.STORY_REBUILD) 
-        
+
         storyMenu.Append(StoryFrame.STORY_PROOF, '&Proof Story...')
         self.Bind(wx.EVT_MENU, self.proof, id = StoryFrame.STORY_PROOF) 
 
+        storyMenu.Append(StoryFrame.STORY_WORD_COUNT, 'Word &Count\tCtrl-Y')
+        self.Bind(wx.EVT_MENU, self.wordCount, id = StoryFrame.STORY_WORD_COUNT) 
+        
+        storyMenu.AppendSeparator()
 
         # Story Format submenu
         
@@ -162,6 +167,24 @@ class StoryFrame (wx.Frame):
         
         storyMenu.AppendMenu(wx.ID_ANY, 'Story &Format', storyFormatMenu)
         
+        # Help menu
+        
+        helpMenu = wx.Menu()
+ 
+        helpMenu.Append(StoryFrame.HELP_MANUAL, 'Online &Help')
+        self.Bind(wx.EVT_MENU, self.app.openDocs, id = StoryFrame.HELP_MANUAL)
+
+        helpMenu.Append(StoryFrame.HELP_GROUP, '&Discuss Twine Online')
+        self.Bind(wx.EVT_MENU, self.app.openGroup, id = StoryFrame.HELP_GROUP)
+
+        helpMenu.Append(StoryFrame.HELP_BUG, 'Report a &Bug')
+        self.Bind(wx.EVT_MENU, self.app.reportBug, id = StoryFrame.HELP_BUG)
+        
+        helpMenu.AppendSeparator()
+        
+        helpMenu.Append(wx.ID_ABOUT, '&About Twine')
+        self.Bind(wx.EVT_MENU, self.app.about, id = wx.ID_ABOUT)
+        
         # add menus
         
         self.menus = wx.MenuBar()
@@ -169,6 +192,7 @@ class StoryFrame (wx.Frame):
         self.menus.Append(editMenu, '&Edit')
         self.menus.Append(viewMenu, '&View')
         self.menus.Append(storyMenu, '&Story')
+        self.menus.Append(helpMenu, '&Help')
         self.SetMenuBar(self.menus)
 
         # add toolbar
@@ -207,7 +231,6 @@ class StoryFrame (wx.Frame):
 
         self.showToolbar = True
         self.toolbar.Realize()
-        self.updateUI()
         self.Show(True)
         
     def newFrame (self, event = None):
@@ -284,7 +307,6 @@ class StoryFrame (wx.Frame):
             self.save(None)
         
         dialog.Destroy()
-        self.updateUI()
         
     def save (self, event = None):
         if (self.saveDestination == ''):
@@ -295,7 +317,6 @@ class StoryFrame (wx.Frame):
         pickle.dump(self.serialize(), dest)
         dest.close()
         self.setDirty(False)
-        self.updateUI()
 
     def build (self, event):
         """Asks the user to choose a location to save a compiled story, then passed control to rebuild()."""
@@ -332,11 +353,36 @@ class StoryFrame (wx.Frame):
         if displayAfter:
             path = 'file://' + urllib.pathname2url(self.buildDestination)
             path = path.replace('file://///', 'file:///')
-            wx.LaunchDefaultBrowser(path)    
+            wx.LaunchDefaultBrowser(path)
+            
+    def wordCount (self, event = None):
+        """
+        Displays a word count to the user.
+        """
+        
+        # have to do some trickery here because Python doesn't do
+        # closures the way JavaScript does
+        
+        counts = { 'words': 0, 'chars': 0 }
+        
+        def count (widget, counts):
+            counts['chars'] += len(widget.passage.text)
+            counts['words'] += len(widget.passage.text.split(None))
+        
+        self.storyPanel.eachPassage(lambda i: count(i, counts))
+        for key in counts:
+            counts[key] = locale.format('%d', counts[key], grouping = True)
+        
+        message = 'Your story contains ' + str(counts['words']) + ' words and ' + \
+                  str(counts['chars']) + ' characters.'
+        dialog = wx.MessageDialog(self, message, 'Word Count', wx.ICON_INFORMATION | wx.OK)
+        dialog.ShowModal()
+        dialog.Destroy()
 
     def proof (self, event = None):
-        """Builds an RTF version of the story. Pass whether to open the destination file \
-           afterwards."""
+        """
+        Builds an RTF version of the story. Pass whether to open the destination file afterwards.
+        """
            
         # ask for our destination
         
@@ -367,9 +413,8 @@ class StoryFrame (wx.Frame):
         
     def setTarget (self, target):
         self.target = target
-        self.updateUI()
         
-    def updateUI (self):
+    def updateUI (self, event = None):
         """Adjusts menu items to reflect the current state."""
         
         # window title
@@ -431,7 +476,6 @@ class StoryFrame (wx.Frame):
         """
         self.dirty = value
         self.pristine = False
-        self.updateUI()
         
     def serialize (self):
         """Returns a dictionary of state suitable for pickling."""
@@ -454,13 +498,18 @@ class StoryFrame (wx.Frame):
     STORY_NEW_PASSAGE = 401
     STORY_BUILD = 404
     STORY_REBUILD = 405
-    STORY_PROOF = 406
+    STORY_WORD_COUNT = 406
+    STORY_PROOF = 407
     
-    STORY_FORMAT_SUGARCANE = 407
-    STORY_FORMAT_JONAH = 408
-    STORY_FORMAT_TW1 = 409
-    STORY_FORMAT_TW2 = 410
-    STORY_FORMAT_HELP = 411
+    STORY_FORMAT_SUGARCANE = 408
+    STORY_FORMAT_JONAH = 409
+    STORY_FORMAT_TW1 = 410
+    STORY_FORMAT_TW2 = 411
+    STORY_FORMAT_HELP = 412
+    
+    HELP_MANUAL = 501
+    HELP_GROUP = 502
+    HELP_BUG = 503
 
     # tooltip labels
     
