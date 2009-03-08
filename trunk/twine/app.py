@@ -13,6 +13,9 @@ class App:
     def __init__ (self):
         """Initializes the application."""
         self.wxApp = wx.PySimpleApp()
+        self.config = wx.Config('Twine')
+        self.recentFiles = wx.FileHistory(5)
+        self.recentFiles.Load(self.config)
         self.frame = StoryFrame(None, app = self)
         self.wxApp.MainLoop()
 

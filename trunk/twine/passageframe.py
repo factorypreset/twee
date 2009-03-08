@@ -10,7 +10,7 @@
 # they are automatically updated everywhere.
 #
 
-import os, wx
+import os, wx, re
 from fseditframe import FullscreenEditFrame
 
 class PassageFrame (wx.Frame):
@@ -99,7 +99,8 @@ class PassageFrame (wx.Frame):
         self.tagsInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.bodyInput.Bind(wx.EVT_TEXT, self.syncPassage)
         
-        self.bodyInput.SetFocus()
+        if not re.match('Untitled Passage \d+', self.widget.passage.title):
+            self.bodyInput.SetFocus()
         self.Show(True)
 
     def syncInputs (self):
@@ -124,6 +125,7 @@ class PassageFrame (wx.Frame):
         self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
         self.widget.Refresh()
         self.widget.parent.Refresh()
+        self.widget.parent.parent.setDirty(True)
     
     def openFullscreen (self, event = None):
         """Opens a FullscreenEditFrame for this passage's body text."""

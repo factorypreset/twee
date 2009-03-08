@@ -176,10 +176,10 @@ class PassageWidget (wx.Panel):
             else:
                 self.SetCursor(self.dragCursor)
                 
-            # force everything to be redrawn
+            # force connectors to be redrawn
+            # todo: make this smarter about the update region
             
             self.parent.Refresh()
-            self.parent.eachPassage(lambda i: i.Refresh())
         else:
             self.dragging = False
             
@@ -201,6 +201,7 @@ class PassageWidget (wx.Panel):
             
             self.parent.resize()
             self.Refresh()
+            self.parent.parent.setDirty(True)
     
     def intersectsAny (self):
         """Returns whether this widget intersects any other in the same StoryPanel."""
@@ -234,53 +235,64 @@ class PassageWidget (wx.Panel):
         dc = wx.BufferedPaintDC(self)
         size = self.GetSize()
 
+        # color scheme
+        
+        if self.selected: colors = PassageWidget.SELECTED_COLORS
+        else: colors = PassageWidget.UNSELECTED_COLORS
+
+        # text font sizes
+        # wxWindows works with points, so we need to doublecheck on actual pixels
+
+        titleFontSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1))[0]
+        titleFontSize = min(titleFontSize, PassageWidget.MAX_TITLE_SIZE)
+        excerptFontSize = min(titleFontSize * 0.9, PassageWidget.MAX_EXCERPT_SIZE)
+        titleFont = wx.Font(titleFontSize, wx.SWISS, wx.NORMAL, wx.BOLD, False, 'Arial')
+        excerptFont = wx.Font(excerptFontSize, wx.SWISS, wx.NORMAL, wx.NORMAL, False, 'Arial')
+        titleFontHeight = math.fabs(titleFont.GetPixelSize()[1])
+        excerptFontHeight = math.fabs(excerptFont.GetPixelSize()[1])
+        
+        # inset for text (we need to know this for layout purposes)
+        
+        inset = titleFontHeight / 3
+
         # frame
 
-        if self.selected:
-            dc.SetPen(wx.Pen(PassageWidget.SELECTED_COLOR, 2))
-        else:
-            dc.SetPen(wx.Pen(PassageWidget.FRAME_COLOR, 1))
-        
-        dc.SetBrush(wx.Brush(PassageWidget.BODY_COLOR))     
+        dc.SetPen(wx.Pen(colors['frame'], 1))
+        dc.SetBrush(wx.Brush(colors['body']))     
         dc.DrawRectangle(0, 0, size.width, size.height)
 
-        # label font sizes
+        # title shade
 
-        titleSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1))[0]
-        excerptSize = min(titleSize * 0.9, PassageWidget.MAX_EXCERPT_SIZE)
-        titleFont = wx.Font(titleSize, wx.SWISS, wx.NORMAL, wx.BOLD, False, 'Arial')
-        excerptFont = wx.Font(excerptSize, wx.SWISS, wx.NORMAL, wx.NORMAL, False, 'Arial')
-
-        # label sizes
-        
-        inset = self.parent.toPixels((PassageWidget.SIZE / 12, -1), scaleOnly = True)[0]
-        labelSize = size
-        labelSize[0] -= inset * 2
-        labelSize[1] -= inset * 2
+        dc.SetBrush(wx.Brush(colors['titleShade']))
+        dc.SetPen(wx.Pen(colors['titleShade'], 1))            
+        titleShadeHeight = titleFontHeight + (2 * inset)
+        dc.DrawRectangle(1, 1, size.width - 2, titleShadeHeight - 2)
         
         # draw title
-        # we let clipping do our work for us
+        # we let clipping prevent writing over the frame
         
         dc.DestroyClippingRegion()
-        dc.SetClippingRect((inset, inset, labelSize[0], labelSize[1]))
+        dc.SetClippingRect((inset, inset, size.width - 2, titleShadeHeight - 2))
         dc.SetFont(titleFont)
+        dc.SetTextForeground(colors['titleText'])
         dc.DrawText(self.passage.title, inset, inset)
-                
+                        
         # draw excerpt
 
-        excerptTop = inset + titleSize + (titleSize * PassageWidget.LINE_SPACING)        
-        dc.DestroyClippingRegion()
-        dc.SetClippingRect((inset, excerptTop, labelSize[0], labelSize[1] - excerptTop))
+        excerptTop = inset + titleShadeHeight
 
         # we split the excerpt by line, then draw them in turn
         # (we use a library to determine breaks, but have to draw the lines ourselves)
 
+        dc.DestroyClippingRegion()
         dc.SetFont(excerptFont)
-        excerptText = wx.lib.wordwrap.wordwrap(self.passage.text, labelSize[0], dc)
+        dc.SetTextForeground(colors['excerptText'])
+        excerptText = wx.lib.wordwrap.wordwrap(self.passage.text, size.width - (inset * 2), dc)
 
         for line in excerptText.split("\n"):
             dc.DrawText(line, inset, excerptTop)
-            excerptTop += excerptSize * PassageWidget.LINE_SPACING
+            excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
+            if excerptTop > size.height - inset: break
     
     def serialize (self):
         """Returns a dictionary with state information suitable for pickling."""
@@ -288,15 +300,14 @@ class PassageWidget (wx.Panel):
     
     MIN_PIXEL_SIZE = 10
     SIZE = 120
-    BODY_COLOR = '#f0f0f0'
-    FRAME_COLOR = '#000000'
-    SELECTED_COLOR = '#0000ff'
+    UNSELECTED_COLORS = { 'frame': '#000000', 'titleShade': '#729fcf', 'body': '#eeeeec', \
+                          'titleText': '#ffffff', 'excerptText': '#000000' }
+    SELECTED_COLORS = { 'frame': '#ffffff', 'titleShade': '#307acf', 'body': '#888a85', \
+                        'titleText': '#000000', 'excerptText': '#eeeeec' }
     TITLE_SIZE = 9
-    TITLE_COLOR = '#000000'
     MAX_TITLE_SIZE = 18
     MAX_EXCERPT_SIZE = 10
     LINE_SPACING = 1.2
-    DRAG_COLOR = '#ff0000'
     
 # contextual menu
 

@@ -17,6 +17,8 @@ class StoryFrame (wx.Frame):
                           size = StoryFrame.DEFAULT_SIZE, pos = pos)     
         self.app = app
         self.parent = parent
+        self.pristine = True    # the user has not added any content to this at all
+        self.dirty = False      # the user has not made unsaved changes
 
         # inner state
         
@@ -25,12 +27,17 @@ class StoryFrame (wx.Frame):
             self.saveDestination = state['saveDestination']
             self.target = state['target']
             self.storyPanel = StoryPanel(self, app, state = state['storyPanel'])
+            self.pristine = False
         else:
             self.buildDestination = ''
             self.saveDestination = ''
             self.target = 'sugarcane'
             self.storyPanel = StoryPanel(self, app)
-                
+        
+        # window events
+        
+        self.Bind(wx.EVT_CLOSE, self.checkClose)
+        
         # File menu
         
         fileMenu = wx.Menu()
@@ -39,7 +46,17 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, self.newFrame, id = wx.ID_NEW)
         
         fileMenu.Append(wx.ID_OPEN, '&Open Story...\tCtrl-O')
-        self.Bind(wx.EVT_MENU, self.open, id = wx.ID_OPEN)
+        self.Bind(wx.EVT_MENU, self.openDialog, id = wx.ID_OPEN)
+
+        openRecent = wx.Menu()
+        fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', openRecent)
+        self.app.recentFiles.UseMenu(openRecent)
+        self.app.recentFiles.AddFilesToMenu()
+        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(0), id = wx.ID_FILE1)
+        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(1), id = wx.ID_FILE2)
+        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(2), id = wx.ID_FILE3)
+        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(3), id = wx.ID_FILE4)
+        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(4), id = wx.ID_FILE5)
         
         fileMenu.AppendSeparator()
         
@@ -50,10 +67,12 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, self.saveAs, id = wx.ID_SAVEAS)
 
         fileMenu.Append(wx.ID_REVERT_TO_SAVED, '&Revert to Saved')
+        self.Bind(wx.EVT_MENU, self.revert, id = wx.ID_REVERT_TO_SAVED)
+        
         fileMenu.AppendSeparator()
         
         fileMenu.Append(wx.ID_CLOSE, '&Close\tCtrl-W')
-        self.Bind(wx.EVT_MENU, lambda e: self.Destroy(), id = wx.ID_CLOSE)
+        self.Bind(wx.EVT_MENU, lambda e: self.Close(), id = wx.ID_CLOSE)
         
         # Edit menu
         
@@ -198,19 +217,62 @@ class StoryFrame (wx.Frame):
         pos.y += 25
         StoryFrame(None, app = self.app, pos = (pos.x, pos.y))
     
-    def open (self, event = None):
+    def openDialog (self, event = None):
         """Opens a story file of the user's choice."""
+        opened = False
         dialog = wx.FileDialog(self, 'Open Story', os.getcwd(), "", \
                                "Tweepad Story (*.tws)|*.tws", \
                                wx.OPEN | wx.FD_CHANGE_DIR)
                                                           
         if dialog.ShowModal() == wx.ID_OK:
-            openedFile = open(dialog.GetPath(), 'r')
-            StoryFrame(None, app = self.app, state = pickle.load(openedFile))
-            openedFile.close()
-                        
+            opened = True
+            self.open(dialog.GetPath())
+                    
         dialog.Destroy()
+        if opened and self.pristine: self.Destroy()
+
+    def openRecent (self, index):
+        """Opens a recently-opened file."""
+        self.open(self.app.recentFiles.GetHistoryFile(index))
+        if self.pristine: self.Destroy()
     
+    def open (self, path):
+        """Opens a specific story file."""
+        openedFile = open(path, 'r')
+        StoryFrame(None, app = self.app, state = pickle.load(openedFile))
+        self.app.recentFiles.AddFileToHistory(path)
+        self.app.recentFiles.Save(self.app.config)
+        openedFile.close()
+        
+    def revert (self, event):
+        """Reverts to the last saved version of the story file."""
+        bits = os.path.splitext(self.saveDestination)
+        title = os.path.basename(bits[0])
+        message = 'Revert to the last version of ' + title + ' you saved?'
+        dialog = wx.MessageDialog(self, message, 'Revert to Saved', wx.ICON_WARNING | wx.YES_NO | wx.NO_DEFAULT)
+        
+        if (dialog.ShowModal() == wx.ID_YES):
+            self.Destroy()
+            self.open(self.saveDestination)
+    
+    def checkClose (self, event):
+        """
+        If this instance's dirty flag is set, asks the user to confirm that they don't want to save changes.
+        """
+        
+        if (self.dirty):
+            bits = os.path.splitext(self.saveDestination)
+            title = os.path.basename(bits[0])
+
+            message = 'Close ' + title + ' without saving changes?'
+            dialog = wx.MessageDialog(self, message, 'Save Changes', \
+                                      wx.ICON_WARNING | wx.YES_NO | wx.NO_DEFAULT)
+            if (dialog.ShowModal() == wx.ID_NO):
+                event.Veto()
+                return
+            
+        event.Skip()
+
     def saveAs (self, event = None):
         """Asks the user to choose a file to save state to, then passes off control to save()."""
         dialog = wx.FileDialog(self, 'Save Story As', os.getcwd(), "", \
@@ -232,6 +294,7 @@ class StoryFrame (wx.Frame):
         dest = open(self.saveDestination, 'w')
         pickle.dump(self.serialize(), dest)
         dest.close()
+        self.setDirty(False)
         self.updateUI()
 
     def build (self, event):
@@ -318,13 +381,15 @@ class StoryFrame (wx.Frame):
             title = os.path.basename(bits[0])
         
         percent = str(int(round(self.storyPanel.scale * 100)))
+        dirty = ''
+        if self.dirty: dirty = ' *'
 
-        self.SetTitle(title + ' (' + percent + '%) - ' + self.app.NAME)
+        self.SetTitle(title + dirty + ' (' + percent + '%) ' + '- ' + self.app.NAME)
         
         # File menu
         
         revertItem = self.menus.FindItemById(wx.ID_REVERT_TO_SAVED)
-        revertItem.Enable(self.saveDestination != '')
+        revertItem.Enable(self.saveDestination != '' and self.dirty)
         
         # View menu
         
@@ -356,6 +421,16 @@ class StoryFrame (wx.Frame):
             self.showToolbar = True
             self.toolbar.Show()
             
+        self.updateUI()
+        
+    def setDirty (self, value):
+        """
+        Sets the dirty flag to the value passed. Make sure to use this instead of
+        setting the dirty property directly, as this method automatically updates
+        the pristine property as well
+        """
+        self.dirty = value
+        self.pristine = False
         self.updateUI()
         
     def serialize (self):

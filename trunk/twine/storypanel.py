@@ -45,6 +45,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_SIZE, self.resize)
         self.Bind(wx.EVT_LEFT_UP, lambda i: self.eachPassage(lambda j: j.setSelected(False)))
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
+        self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newPassage(pos = e.GetPosition()))
 
     def newPassage (self, title = None, text = '', pos = (10, 10)):
         """Adds a new PassageWidget to the container."""
@@ -133,6 +134,8 @@ class StoryPanel (wx.ScrolledWindow):
         exactly, pass 'in' or 'out' to zoom relatively, and 'fit'
         to set the zoom so that all children are visible.
         """
+        oldScale = self.scale
+        
         if (isinstance(scale, float)):
             self.scale = scale
         else:
@@ -150,11 +153,19 @@ class StoryPanel (wx.ScrolledWindow):
                 self.Scroll(0, 0)
                 
         self.scale = max(self.scale, 0.2)
-                
-        print 'scale now ', self.scale
+        scaleDelta = self.scale - oldScale
+        
+        # figure out what our scroll bar positions should be moved to
+        # to keep in scale
+        
+        origin = list(self.GetViewStart())
+        origin[0] += scaleDelta * origin[0]
+        origin[1] += scaleDelta * origin[1]
+        
         for i in self.passages: i.resize()
         self.resize()
         self.Refresh()
+        self.Scroll(origin[0], origin[1])
         self.parent.updateUI()
 
     def paint (self, event):
@@ -164,11 +175,11 @@ class StoryPanel (wx.ScrolledWindow):
         # we already take into account our scroll origin in our
         # toPixels() method
         
-        dc = wx.BufferedPaintDC(self)
+        dc = wx.PaintDC(self)
         dc.SetBackground(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
         dc.Clear()
         dc.SetPen(wx.Pen(StoryPanel.CONNECTOR_COLOR))
-                
+        
         for widget in self.passages:            
             start = self.toPixels(widget.getCenter())
             for link in widget.passage.links():
@@ -204,8 +215,8 @@ class StoryPanel (wx.ScrolledWindow):
      
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
-    BACKGROUND_COLOR = '#666666'
-    CONNECTOR_COLOR = '#000000'
+    BACKGROUND_COLOR = '#2e3436'
+    CONNECTOR_COLOR = '#888a85'
     SCROLL_SPEED = 10
     EXTRA_SPACE = 200
     
