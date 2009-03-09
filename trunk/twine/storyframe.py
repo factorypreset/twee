@@ -110,8 +110,13 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.zoom(1), id = wx.ID_ZOOM_100)
         
         viewMenu.AppendSeparator()
-        viewMenu.Append(StoryFrame.VIEW_SNAP, 'Snap to &Grid')
+
+        viewMenu.Append(StoryFrame.VIEW_SNAP, 'Snap to &Grid', kind = wx.ITEM_CHECK)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.toggleSnapping(), id = StoryFrame.VIEW_SNAP)
+
         viewMenu.Append(StoryFrame.VIEW_CLEANUP, '&Clean Up Passages')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.cleanup(), id = StoryFrame.VIEW_CLEANUP)
+        
         viewMenu.AppendSeparator()
         
         viewMenu.Append(StoryFrame.VIEW_TOOLBAR, '&Toolbar', kind = wx.ITEM_CHECK)
@@ -440,6 +445,8 @@ class StoryFrame (wx.Frame):
         
         toolbarItem = self.menus.FindItemById(StoryFrame.VIEW_TOOLBAR)
         toolbarItem.Check(self.showToolbar)
+        snapItem = self.menus.FindItemById(StoryFrame.VIEW_SNAP)
+        toolbarItem.Check(self.storyPanel.snapping)
         
         # Story menu
         

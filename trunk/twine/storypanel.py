@@ -28,12 +28,14 @@ class StoryPanel (wx.ScrolledWindow):
         
         # inner state
         
+        self.snapping = False
         self.passages = []
         
         if (state):
             self.scale = state['scale']
             for passage in state['passages']:
                 self.passages.append(PassageWidget(self, self.app, state = passage))
+            if (hasattr(state, 'snapping')) and state['snapping']: self.snapping = True
         else:
             self.scale = 1
             self.newPassage(title = StoryPanel.FIRST_TITLE, text = StoryPanel.FIRST_TEXT)
@@ -47,8 +49,12 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
         self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newPassage(pos = e.GetPosition()))
 
-    def newPassage (self, title = None, text = '', pos = (10, 10)):
+    def newPassage (self, title = None, text = '', pos = None):
         """Adds a new PassageWidget to the container."""
+        
+        # have to put this inside the method body
+        
+        if not pos: pos = StoryPanel.INSET
         
         # calculate position
         
@@ -67,6 +73,35 @@ class StoryPanel (wx.ScrolledWindow):
         see PassageWidget.delete() for that.
         """
         self.passages.remove(passage)
+        
+    def snapPassage (self, passage):
+        """Snaps a passage to our grid if self.snapping is set."""
+        if self.snapping:
+            pos = list(passage.pos)
+            
+            for coord in range(0, 1):
+                distance = pos[coord] % StoryPanel.GRID_SPACING
+                if (distance > StoryPanel.GRID_SPACING / 2):
+                    pos[coord] += StoryPanel.GRID_SPACING - distance
+                else:
+                    pos[coord] -= distance
+                pos[coord] += StoryPanel.INSET[coord]
+                
+            passage.moveTo(pos)
+            self.Refresh()
+            
+    def cleanup (self):
+        """Snaps all passages to the grid."""
+        oldSnapping = self.snapping
+        self.snapping = True
+        self.eachPassage(self.snapPassage)
+        self.snapping = oldSnapping
+        self.parent.setDirty(True)
+        self.Refresh()
+
+    def toggleSnapping (self):
+        """Toggles whether snapping is on."""
+        self.snapping = self.snapping is not True
         
     def untitledName (self):
         """Returns a string for an untitled PassageWidget."""
@@ -212,13 +247,15 @@ class StoryPanel (wx.ScrolledWindow):
             state['passages'].append(widget.serialize())
             
         return state
-     
+    
+    INSET = (10, 10)
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
     BACKGROUND_COLOR = '#2e3436'
     CONNECTOR_COLOR = '#888a85'
     SCROLL_SPEED = 10
     EXTRA_SPACE = 200
+    GRID_SPACING = 140
     
 # context menu
 

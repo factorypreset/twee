@@ -188,6 +188,10 @@ class PassageWidget (wx.Panel):
             if self.intersectsAny():
                 self.pos = self.predragPosition
             
+            # snap to grid
+            
+            self.parent.snapPassage(self)
+            
             # clear event handlers
             
             self.Bind(wx.EVT_MOUSE_EVENTS, None)
