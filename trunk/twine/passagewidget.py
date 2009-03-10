@@ -92,6 +92,12 @@ class PassageWidget (wx.Panel):
         pos[1] += self.getSize()[1] / 2
         return pos
     
+    def getPixelRect (self):
+        """Returns this instance's rectangle onscreen."""
+        origin = self.parent.toPixels(self.pos)
+        size = self.parent.toPixels((PassageWidget.SIZE, -1), scaleOnly = True)[0]
+        return wx.Rect(origin[0], origin[1], size, size)
+    
     def moveTo (self, pos):
         """
         Moves this instance to the logical position passed. You must
@@ -176,10 +182,27 @@ class PassageWidget (wx.Panel):
             else:
                 self.SetCursor(self.dragCursor)
                 
-            # force connectors to be redrawn
-            # todo: make this smarter about the update region
+            # calculate dirty region and force connectors to be redrawn
             
-            self.parent.Refresh()
+            dirtyRect = self.getPixelRect()
+            
+            # first, passages we link to
+            
+            for link in self.passage.links():
+                passage = self.parent.findPassage(link)
+                if passage: dirtyRect = dirtyRect.Union(passage.getPixelRect())
+            
+            # then, those that link to us
+            # Python closures are odd, require lists to affect things outside
+            
+            bridge = [ dirtyRect ]
+            
+            def addLinkingToRect (widget):
+                if self.passage.title in widget.passage.links():
+                    dirtyRect = bridge[0].Union(widget.getPixelRect())
+            
+            self.parent.eachPassage(addLinkingToRect)
+            self.parent.Refresh(True, dirtyRect)
         else:
             self.dragging = False
             
@@ -219,12 +242,16 @@ class PassageWidget (wx.Panel):
         return intersects
 
     def intersects (self, other):
-        """Returns whether this widget intersects another. Note that this uses logical \
-           coordinates, so you can do this without actually moving the widget onscreen."""
+        """
+        Returns whether this widget intersects another widget or wx.Rect.
+        This uses logical coordinates, so you can do this without actually moving the widget onscreen.
+        """
            
         selfRect = wx.Rect(self.pos[0], self.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
-        otherRect = wx.Rect(other.pos[0], other.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
-        return selfRect.Intersects(otherRect)
+        
+        if isinstance(other, PassageWidget):
+            other = wx.Rect(other.pos[0], other.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
+        return selfRect.Intersects(other)
 
     def resize (self):
         """Resizes widget onscreen based on parent panel scale."""
@@ -276,7 +303,7 @@ class PassageWidget (wx.Panel):
         # we let clipping prevent writing over the frame
         
         dc.DestroyClippingRegion()
-        dc.SetClippingRect((inset, inset, size.width - 2, titleShadeHeight - 2))
+        dc.SetClippingRect((inset, inset, size.width - (inset * 2), titleShadeHeight - 2))
         dc.SetFont(titleFont)
         dc.SetTextForeground(colors['titleText'])
         dc.DrawText(self.passage.title, inset, inset)

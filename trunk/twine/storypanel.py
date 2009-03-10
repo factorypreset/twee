@@ -16,7 +16,7 @@
 # coordinates as soon as possible.
 #
 
-import wx, re
+import wx, re, rectmath
 from passagewidget import PassageWidget
 
 class StoryPanel (wx.ScrolledWindow):
@@ -30,6 +30,7 @@ class StoryPanel (wx.ScrolledWindow):
         
         self.snapping = False
         self.passages = []
+        self.dragging = False
         
         if (state):
             self.scale = state['scale']
@@ -45,6 +46,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, self.resize)
+        self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
         self.Bind(wx.EVT_LEFT_UP, lambda i: self.eachPassage(lambda j: j.setSelected(False)))
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
         self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newPassage(pos = e.GetPosition()))
@@ -102,6 +104,51 @@ class StoryPanel (wx.ScrolledWindow):
     def toggleSnapping (self):
         """Toggles whether snapping is on."""
         self.snapping = self.snapping is not True
+
+    def startDrag (self, event):
+        if not self.dragging:
+            self.dragging = True
+            self.dragOrigin = event.GetPosition()
+            self.dragCurrent = event.GetPosition()
+            self.dragRect = rectmath.pointsToRect(self.dragOrigin, self.dragOrigin)
+            
+            # deselect everything
+            
+            for widget in self.passages:
+                widget.setSelected(False, False)
+            
+            # grab mouse focus
+            
+            self.Bind(wx.EVT_MOUSE_EVENTS, self.followMouse)
+            self.CaptureMouse()
+            self.Refresh()
+
+    def followMouse (self, event):
+        if event.LeftIsDown():
+            self.oldDirtyRect = self.dragRect
+            self.dragCurrent = event.GetPosition()
+            self.dragRect = rectmath.pointsToRect(self.dragOrigin, self.dragCurrent)
+             
+            # select all enclosed widgets
+            
+            logicalRect = self.dragRect
+            logicalRect.SetTopLeft(self.toPixels((logicalRect.x, logicalRect.y)))
+            logicalRect.SetWidth(self.toPixels((logicalRect.width, -1), scaleOnly = True)[0])
+            logicalRect.SetHeight(self.toPixels((logicalRect.height, -1), scaleOnly = True)[0])
+            
+            for widget in self.passages:
+                widget.setSelected(widget.intersects(logicalRect), False)
+            
+            self.oldDirtyRect.Inflate(2, 2)   # don't know exactly, but sometimes we're off by 1
+            self.Refresh(True, self.oldDirtyRect)
+        else:
+            self.dragging = False
+                        
+            # clear event handlers
+            
+            self.Bind(wx.EVT_MOUSE_EVENTS, None)
+            self.ReleaseMouse()            
+            self.Refresh()
         
     def untitledName (self):
         """Returns a string for an untitled PassageWidget."""
@@ -204,15 +251,21 @@ class StoryPanel (wx.ScrolledWindow):
         self.parent.updateUI()
 
     def paint (self, event):
-        """Paints widget connectors onscreen."""
+        """Paints select box and widget connectors onscreen."""
         
         # do NOT call self.DoPrepareDC() no matter what the docs may say
         # we already take into account our scroll origin in our
         # toPixels() method
         
-        dc = wx.PaintDC(self)
+        dc = wx.BufferedPaintDC(self)
+        
+        # background
+        
         dc.SetBackground(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
         dc.Clear()
+        
+        # connectors
+        
         dc.SetPen(wx.Pen(StoryPanel.CONNECTOR_COLOR))
         
         for widget in self.passages:            
@@ -222,7 +275,14 @@ class StoryPanel (wx.ScrolledWindow):
                 if otherWidget:
                     end = self.toPixels(otherWidget.getCenter())
                     dc.DrawLine(start[0], start[1], end[0], end[1])
-                        
+        
+        # select box
+        
+        if self.dragging:
+            dc.SetPen(wx.Pen(StoryPanel.SELECT_COLOR, style = wx.DOT))
+            dc.SetBrush(wx.Brush('#000000', style = wx.TRANSPARENT))
+            dc.DrawRectangle(self.dragRect.x, self.dragRect.y, self.dragRect.width, self.dragRect.height)
+            
     def resize (self, event = None):
         """
         Sets scrollbar settings based on panel size and widgets inside.
@@ -253,6 +313,7 @@ class StoryPanel (wx.ScrolledWindow):
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
     BACKGROUND_COLOR = '#2e3436'
     CONNECTOR_COLOR = '#888a85'
+    SELECT_COLOR = '#ffffff'
     SCROLL_SPEED = 10
     EXTRA_SPACE = 200
     GRID_SPACING = 140
