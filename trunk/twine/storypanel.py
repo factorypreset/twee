@@ -30,7 +30,8 @@ class StoryPanel (wx.ScrolledWindow):
         
         self.snapping = False
         self.passages = []
-        self.dragging = False
+        self.draggingMarquee = False
+        self.draggingWidgets = False
         
         if (state):
             self.scale = state['scale']
@@ -41,12 +42,19 @@ class StoryPanel (wx.ScrolledWindow):
             self.scale = 1
             self.newPassage(title = StoryPanel.FIRST_TITLE, text = StoryPanel.FIRST_TEXT)
 
+        # cursors
+        
+        self.dragCursor = wx.StockCursor(wx.CURSOR_SIZING)
+        self.badDragCursor = wx.StockCursor(wx.CURSOR_NO_ENTRY)
+        self.defaultCursor = wx.StockCursor(wx.CURSOR_ARROW)
+        self.SetCursor(self.defaultCursor)
+
         # events
 
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, self.resize)
-        self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
+        self.Bind(wx.EVT_LEFT_DOWN, self.startMarquee)
         self.Bind(wx.EVT_LEFT_UP, lambda i: self.eachPassage(lambda j: j.setSelected(False)))
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
         self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newPassage(pos = e.GetPosition()))
@@ -105,10 +113,11 @@ class StoryPanel (wx.ScrolledWindow):
         """Toggles whether snapping is on."""
         self.snapping = self.snapping is not True
 
-    def startDrag (self, event):
-        if not self.dragging:
-            self.dragging = True
-            self.dragOrigin = event.GetPosition()
+    def startMarquee (self, event):
+        """Starts a marquee selection."""
+        if not self.draggingMarquee:
+            self.draggingMarquee = True
+            self.dragOrigin = self.CalcScrolledPosition(event.GetPosition())
             self.dragCurrent = event.GetPosition()
             self.dragRect = rectmath.pointsToRect(self.dragOrigin, self.dragOrigin)
             
@@ -119,22 +128,23 @@ class StoryPanel (wx.ScrolledWindow):
             
             # grab mouse focus
             
-            self.Bind(wx.EVT_MOUSE_EVENTS, self.followMouse)
+            self.Bind(wx.EVT_MOUSE_EVENTS, self.followMarquee)
             self.CaptureMouse()
             self.Refresh()
 
-    def followMouse (self, event):
+    def followMarquee (self, event):
+        """Follows the mouse during a marquee selection."""
         if event.LeftIsDown():
             self.oldDirtyRect = self.dragRect
-            self.dragCurrent = event.GetPosition()
+            self.dragCurrent = self.CalcScrolledPosition(event.GetPosition())
             self.dragRect = rectmath.pointsToRect(self.dragOrigin, self.dragCurrent)
              
             # select all enclosed widgets
             
             logicalRect = self.dragRect
-            logicalRect.SetTopLeft(self.toPixels((logicalRect.x, logicalRect.y)))
-            logicalRect.SetWidth(self.toPixels((logicalRect.width, -1), scaleOnly = True)[0])
-            logicalRect.SetHeight(self.toPixels((logicalRect.height, -1), scaleOnly = True)[0])
+            logicalRect.SetTopLeft(self.toLogical((logicalRect.x, logicalRect.y)))
+            logicalRect.SetWidth(self.toLogical((logicalRect.width, -1), scaleOnly = True)[0])
+            logicalRect.SetHeight(self.toLogical((logicalRect.height, -1), scaleOnly = True)[0])
             
             for widget in self.passages:
                 widget.setSelected(widget.intersects(logicalRect), False)
@@ -142,12 +152,109 @@ class StoryPanel (wx.ScrolledWindow):
             self.oldDirtyRect.Inflate(2, 2)   # don't know exactly, but sometimes we're off by 1
             self.Refresh(True, self.oldDirtyRect)
         else:
-            self.dragging = False
+            self.draggingMarquee = False
                         
             # clear event handlers
             
             self.Bind(wx.EVT_MOUSE_EVENTS, None)
             self.ReleaseMouse()            
+            self.Refresh()
+            
+    def startDrag (self, event, clickedWidget):
+        """
+        Starts a widget drag. The initial event is caught by PassageWidget, but
+        it passes control to us so that we can move all selected widgets at once.
+        """
+        if not self.draggingWidgets:
+            self.draggingWidgets = True
+            self.clickedWidget = clickedWidget
+            self.actuallyDragged = False
+            self.dragCurrent = clickedWidget.ClientToScreen(event.GetPosition())
+            self.dragCurrent = self.ScreenToClient(self.dragCurrent)
+            
+            print self.dragCurrent
+            
+            # have selected widgets remember their original position
+            # in case they need to snap back to it after a bad drag
+            
+            for passage in self.passages:
+                if passage.selected: passage.predragPos = passage.pos
+            
+            # grab mouse focus
+            
+            self.Bind(wx.EVT_MOUSE_EVENTS, self.followDrag)
+            self.CaptureMouse()
+        
+    def followDrag (self, event):
+        """Follows mouse motions during a widget drag."""
+        if event.LeftIsDown():
+            self.actuallyDragged = True
+            
+            # find change in position
+            deltaX = event.GetPosition()[0] - self.dragCurrent[0]
+            deltaY = event.GetPosition()[1] - self.dragCurrent[1]
+            
+            deltaX = self.toLogical((deltaX, -1), scaleOnly = True)[0]
+            deltaY = self.toLogical((deltaY, -1), scaleOnly = True)[0]
+            
+            print (deltaX, deltaY)
+            
+            # offset selected passages
+            
+            self.eachSelectedPassage(lambda p: p.offset(deltaX, deltaY))
+            self.dragCurrent = event.GetPosition()
+                        
+            # if there any overlaps, then warn the user with a bad drag cursor
+            
+            goodDrag = True
+            
+            for passage in self.passages:
+                if passage.selected and passage.intersectsAny():
+                    goodDrag = False
+                    break
+                
+            if goodDrag:
+                self.SetCursor(self.dragCursor)
+            else:
+                self.SetCursor(self.badDragCursor)
+            
+            # figure out our dirty rect
+            
+            dirtyRect = wx.Rect(0, 0, 0, 0)
+            
+            for passage in self.passages:
+                if passage.selected:
+                    dirtyRect = dirtyRect.Union(passage.dirtyPixelRect())
+            
+            self.Refresh(True, dirtyRect)
+        else:
+            self.draggingWidgets = False
+
+            if self.actuallyDragged:
+                # is this a bad drag?
+    
+                goodDrag = True
+                
+                for passage in self.passages:
+                    if passage.selected and passage.intersectsAny():
+                        goodDrag = False
+                        break
+                    
+                if goodDrag:
+                    self.eachSelectedPassage(lambda p: self.snapPassage(p))
+                    self.parent.setDirty(True)
+                    self.resize()
+                else:
+                    self.eachSelectedPassage(lambda p: p.moveTo(p.predragPos))
+            else:
+                # change the selection
+                self.clickedWidget.setSelected(True, not event.ShiftDown())
+        
+            # general cleanup
+            
+            self.Bind(wx.EVT_MOUSE_EVENTS, None)
+            self.ReleaseMouse()        
+            self.SetCursor(self.defaultCursor)
             self.Refresh()
         
     def untitledName (self):
@@ -169,6 +276,12 @@ class StoryPanel (wx.ScrolledWindow):
         """Runs a function on every selected passage in the panel."""
         for passage in self.passages:
             if passage.selected: function(passage)
+            
+    def hasSelection (self):
+        """Returns whether any passages are selected."""
+        for passage in self.passages:
+            if passage.selected: return True
+        return False
             
     def findPassage (self, title):
         """Returns a PassageWidget with the title passed. If none exists, it returns None."""
@@ -251,13 +364,13 @@ class StoryPanel (wx.ScrolledWindow):
         self.parent.updateUI()
 
     def paint (self, event):
-        """Paints select box and widget connectors onscreen."""
+        """Paints marquee selection and widget connectors onscreen."""
         
         # do NOT call self.DoPrepareDC() no matter what the docs may say
         # we already take into account our scroll origin in our
         # toPixels() method
         
-        dc = wx.BufferedPaintDC(self)
+        dc = wx.PaintDC(self)
         
         # background
         
@@ -276,9 +389,9 @@ class StoryPanel (wx.ScrolledWindow):
                     end = self.toPixels(otherWidget.getCenter())
                     dc.DrawLine(start[0], start[1], end[0], end[1])
         
-        # select box
+        # marquee selection
         
-        if self.dragging:
+        if self.draggingMarquee:
             dc.SetPen(wx.Pen(StoryPanel.SELECT_COLOR, style = wx.DOT))
             dc.SetBrush(wx.Brush('#000000', style = wx.TRANSPARENT))
             dc.DrawRectangle(self.dragRect.x, self.dragRect.y, self.dragRect.width, self.dragRect.height)

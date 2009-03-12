@@ -61,17 +61,10 @@ class PassageWidget (wx.Panel):
         wx.Panel.__init__(self, parent, id, size = self.parent.toPixels(self.getSize(), scaleOnly = True), \
                           pos = self.parent.toPixels(self.pos))
                 
-        # cursors
-        
-        self.defaultCursor = wx.StockCursor(wx.CURSOR_ARROW)
-        self.dragCursor = wx.StockCursor(wx.CURSOR_SIZING)
-        self.badDragCursor = wx.StockCursor(wx.CURSOR_NO_ENTRY)
-        self.SetCursor(self.defaultCursor)
-        
         # events
         
         self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
-        self.Bind(wx.EVT_LEFT_UP, self.handleClick)
+        #self.Bind(wx.EVT_LEFT_UP, lambda e: self.setSelected(True, not e.ShiftDown()))
         self.Bind(wx.EVT_LEFT_DCLICK, self.openEditor)
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(PassageWidgetContext(self), e.GetPosition()))
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)  
@@ -107,6 +100,10 @@ class PassageWidget (wx.Panel):
         self.pos = pos
         self.SetPosition(self.parent.toPixels(self.pos))
  
+    def offset (self, x = 0, y = 0):
+        """Offsets this widget's position by logical coordinates."""
+        self.moveTo((self.pos[0] + x, self.pos[1] + y))
+ 
     def setSelected (self, value, exclusive = True):
         """Sets whether this widget should be selected. Pass a false value for \
            exclusive to prevent other widgets from being deselected."""
@@ -116,9 +113,10 @@ class PassageWidget (wx.Panel):
         self.selected = value
         self.Refresh()
         
-    def handleClick (self, event):
-        """Handles single-clicks on the widget."""
-        self.setSelected(True, not event.ShiftDown())
+    def startDrag (self, event):
+        """Starts a drag and hands off execution to StoryPanel to track it."""
+        if not self.parent.hasSelection(): self.setSelected(True)
+        self.parent.startDrag(event, self)
     
     def openEditor (self, event):
         """Opens a PassageFrame to edit this passage."""
@@ -136,100 +134,7 @@ class PassageWidget (wx.Panel):
         """Deletes this passage from onscreen."""
         self.parent.removePassage(self)
         self.Destroy()
-            
-    def startDrag (self, event):
-        """Starts watching mouse events during a drag operation."""
-        if not self.dragging:
-            self.dragging = True
-            self.setSelected(True, not event.ShiftDown())
-            self.dragOrigin = event.GetPosition() # this is relative to the widget itself
-            self.predragPosition = self.pos
-            
-            # grab mouse focus
-            
-            self.Bind(wx.EVT_MOUSE_EVENTS, self.followMouse)
-            self.CaptureMouse()
-            
-            # set cursor
-            
-            self.SetCursor(self.dragCursor)
-            self.Refresh()
-        
-    def followMouse (self, event):
-        """Updates position during a drag operation, preventing overlap with other widgets."""
-        if event.LeftIsDown():
-            # figure out new position in pixels
-            
-            pos = event.GetPosition()
-            selfPosition = self.GetPosition()
-            pos.x += selfPosition.x
-            pos.y += selfPosition.y
-                                    
-            # offset position by drag origin
-            
-            pos.x -= self.dragOrigin.x
-            pos.y -= self.dragOrigin.y
-            
-            # and convert to logicals
-            
-            self.moveTo(self.parent.toLogical((pos.x, pos.y)))
-            
-            # if our new position intersects another widget,
-            # give the user a 'bad drag' cursor as warning
 
-            if self.intersectsAny():
-                self.SetCursor(self.badDragCursor)
-            else:
-                self.SetCursor(self.dragCursor)
-                
-            # calculate dirty region and force connectors to be redrawn
-            
-            dirtyRect = self.getPixelRect()
-            
-            # first, passages we link to
-            
-            for link in self.passage.links():
-                passage = self.parent.findPassage(link)
-                if passage: dirtyRect = dirtyRect.Union(passage.getPixelRect())
-            
-            # then, those that link to us
-            # Python closures are odd, require lists to affect things outside
-            
-            bridge = [ dirtyRect ]
-            
-            def addLinkingToRect (widget):
-                if self.passage.title in widget.passage.links():
-                    dirtyRect = bridge[0].Union(widget.getPixelRect())
-            
-            self.parent.eachPassage(addLinkingToRect)
-            self.parent.Refresh(True, dirtyRect)
-        else:
-            self.dragging = False
-            
-            # snap back to original position if we're intersecting
-            
-            if self.intersectsAny():
-                self.pos = self.predragPosition
-            
-            # snap to grid
-            
-            self.parent.snapPassage(self)
-            
-            # clear event handlers
-            
-            self.Bind(wx.EVT_MOUSE_EVENTS, None)
-            self.ReleaseMouse()
-            
-            # reset cursors
-            
-            self.SetCursor(self.defaultCursor)
-            
-            # force redraw of parent and self
-            
-            self.parent.resize()
-            self.Refresh()
-            self.parent.parent.setDirty(True)
-    
     def intersectsAny (self):
         """Returns whether this widget intersects any other in the same StoryPanel."""
         intersects = False
@@ -245,8 +150,7 @@ class PassageWidget (wx.Panel):
         """
         Returns whether this widget intersects another widget or wx.Rect.
         This uses logical coordinates, so you can do this without actually moving the widget onscreen.
-        """
-           
+        """   
         selfRect = wx.Rect(self.pos[0], self.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
         
         if isinstance(other, PassageWidget):
@@ -255,12 +159,38 @@ class PassageWidget (wx.Panel):
 
     def resize (self):
         """Resizes widget onscreen based on parent panel scale."""
-        
         size = self.parent.toPixels(self.getSize(), scaleOnly = True)
         size = map(lambda i: max(i, PassageWidget.MIN_PIXEL_SIZE), size)
         pos = self.parent.toPixels(self.pos)
         self.SetDimensions(pos[0], pos[1], size[0], size[1])
-    
+
+    def dirtyPixelRect (self):
+        """
+        Returns a pixel rectangle of everything that needs to be redrawn for the widget
+        in its current position. This includes the widget itself as well as any
+        other widgets it links to.
+        """            
+        dirtyRect = self.getPixelRect()
+        
+        # first, passages we link to
+        
+        for link in self.passage.links():
+            passage = self.parent.findPassage(link)
+            if passage: dirtyRect = dirtyRect.Union(passage.getPixelRect())
+        
+        # then, those that link to us
+        # Python closures are odd, require lists to affect things outside
+        
+        bridge = [ dirtyRect ]
+        
+        def addLinkingToRect (widget):
+            if self.passage.title in widget.passage.links():
+                dirtyRect = bridge[0].Union(widget.getPixelRect())
+        
+        self.parent.eachPassage(addLinkingToRect)
+
+        return dirtyRect
+
     def paint (self, event):
         """Paints widget onscreen."""
         dc = wx.BufferedPaintDC(self)
@@ -333,7 +263,7 @@ class PassageWidget (wx.Panel):
     SIZE = 120
     UNSELECTED_COLORS = { 'frame': '#000000', 'titleShade': '#729fcf', 'body': '#eeeeec', \
                           'titleText': '#ffffff', 'excerptText': '#000000' }
-    SELECTED_COLORS = { 'frame': '#ffffff', 'titleShade': '#307acf', 'body': '#888a85', \
+    SELECTED_COLORS = { 'frame': '#ffffff', 'titleShade': '#204a87', 'body': '#000000', \
                         'titleText': '#000000', 'excerptText': '#eeeeec' }
     TITLE_SIZE = 9
     MAX_TITLE_SIZE = 18
