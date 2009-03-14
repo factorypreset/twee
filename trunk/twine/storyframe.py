@@ -85,10 +85,10 @@ class StoryFrame (wx.Frame):
         editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
         
         editMenu.Append(wx.ID_DELETE, '&Delete')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedPassage(lambda i: i.delete()), id = wx.ID_DELETE)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
 
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachPassage(lambda i: i.setSelected(True, exclusive = False)), id = wx.ID_SELECTALL)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachWidget(lambda i: i.setSelected(True, exclusive = False)), id = wx.ID_SELECTALL)
         
         editMenu.AppendSeparator()
         editMenu.Append(wx.ID_PREFERENCES, 'Preferences...')
@@ -127,13 +127,13 @@ class StoryFrame (wx.Frame):
         storyMenu = wx.Menu()
         
         storyMenu.Append(StoryFrame.STORY_NEW_PASSAGE, '&New Passage\tCtrl-N')
-        self.Bind(wx.EVT_MENU, self.storyPanel.newPassage, id = StoryFrame.STORY_NEW_PASSAGE)
+        self.Bind(wx.EVT_MENU, self.storyPanel.newWidget, id = StoryFrame.STORY_NEW_PASSAGE)
         
         storyMenu.Append(wx.ID_EDIT, '&Edit Passage\tCtrl-E')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedPassage(lambda i: i.openEditor(e)), id = wx.ID_EDIT)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.openEditor(e)), id = wx.ID_EDIT)
         
         storyMenu.Append(wx.ID_DELETE, '&Delete Passage')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedPassage(lambda i: i.delete()), id = wx.ID_DELETE)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
  
         storyMenu.AppendSeparator()
         
@@ -210,7 +210,7 @@ class StoryFrame (wx.Frame):
         self.toolbar.AddLabelTool(StoryFrame.STORY_NEW_PASSAGE, 'New Passage', \
                                   wx.Bitmap(iconPath + 'newpassage.png'), \
                                   shortHelp = StoryFrame.NEW_PASSAGE_TOOLTIP)
-        self.Bind(wx.EVT_TOOL, lambda e: self.storyPanel.newPassage(), id = StoryFrame.STORY_NEW_PASSAGE)
+        self.Bind(wx.EVT_TOOL, lambda e: self.storyPanel.newWidget(), id = StoryFrame.STORY_NEW_PASSAGE)
         
         self.toolbar.AddSeparator()
         
@@ -374,7 +374,7 @@ class StoryFrame (wx.Frame):
             counts['chars'] += len(widget.passage.text)
             counts['words'] += len(widget.passage.text.split(None))
         
-        self.storyPanel.eachPassage(lambda i: count(i, counts))
+        self.storyPanel.eachWidget(lambda w: count(w, counts))
         for key in counts:
             counts[key] = locale.format('%d', counts[key], grouping = True)
         
@@ -410,9 +410,7 @@ class StoryFrame (wx.Frame):
         
         tw = TiddlyWiki()
         
-        for widget in self.storyPanel.passages:
-            tw.addTiddler(widget.passage)
-        
+        self.storyPanel.eachWidget(lambda w: tw.addTiddler(w.passage))
         dest.write(tw.toRtf())
         dest.close()
         

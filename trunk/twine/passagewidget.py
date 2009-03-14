@@ -55,8 +55,8 @@ class PassageWidget (wx.Panel):
                                                  scaleOnly = True)[0]
                 
                 if rightEdge > maxWidth:
-                        pos[0] = originalX
-                        pos[1] += PassageWidget.SIZE * 1.25
+                    pos[0] = originalX
+                    pos[1] += PassageWidget.SIZE * 1.25
                 
         wx.Panel.__init__(self, parent, id, size = self.parent.toPixels(self.getSize(), scaleOnly = True), \
                           pos = self.parent.toPixels(self.pos))
@@ -64,7 +64,6 @@ class PassageWidget (wx.Panel):
         # events
         
         self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
-        #self.Bind(wx.EVT_LEFT_UP, lambda e: self.setSelected(True, not e.ShiftDown()))
         self.Bind(wx.EVT_LEFT_DCLICK, self.openEditor)
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(PassageWidgetContext(self), e.GetPosition()))
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)  
@@ -108,7 +107,7 @@ class PassageWidget (wx.Panel):
         """Sets whether this widget should be selected. Pass a false value for \
            exclusive to prevent other widgets from being deselected."""
         if (exclusive):
-            self.parent.eachPassage(lambda i: i.setSelected(False, False))
+            self.parent.eachWidget(lambda i: i.setSelected(False, False))
         
         self.selected = value
         self.Refresh()
@@ -132,14 +131,16 @@ class PassageWidget (wx.Panel):
 
     def delete (self, event = None):
         """Deletes this passage from onscreen."""
-        self.parent.removePassage(self)
+        self.parent.removeWidget(self)
         self.Destroy()
 
     def intersectsAny (self):
         """Returns whether this widget intersects any other in the same StoryPanel."""
         intersects = False
         
-        for widget in self.parent.passages:
+        # we do this manually so we don't have to go through all of them
+        
+        for widget in self.parent.widgets:
             if (widget != self) and (self.intersects(widget)):
                 intersects = True
                 break
@@ -175,8 +176,8 @@ class PassageWidget (wx.Panel):
         # first, passages we link to
         
         for link in self.passage.links():
-            passage = self.parent.findPassage(link)
-            if passage: dirtyRect = dirtyRect.Union(passage.getPixelRect())
+            widget = self.parent.findWidget(link)
+            if widget: dirtyRect = dirtyRect.Union(widget.getPixelRect())
         
         # then, those that link to us
         # Python closures are odd, require lists to affect things outside
@@ -187,7 +188,7 @@ class PassageWidget (wx.Panel):
             if self.passage.title in widget.passage.links():
                 dirtyRect = bridge[0].Union(widget.getPixelRect())
         
-        self.parent.eachPassage(addLinkingToRect)
+        self.parent.eachWidget(addLinkingToRect)
 
         return dirtyRect
 
