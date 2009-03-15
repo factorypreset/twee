@@ -16,7 +16,7 @@
 # coordinates as soon as possible.
 #
 
-import wx, re, rectmath
+import wx, re, rectmath, pickle
 from passagewidget import PassageWidget
 
 class StoryPanel (wx.ScrolledWindow):
@@ -112,7 +112,43 @@ class StoryPanel (wx.ScrolledWindow):
     def toggleSnapping (self):
         """Toggles whether snapping is on."""
         self.snapping = self.snapping is not True
-
+        
+    def copyWidgets (self):
+        """Copies selected widgets into the clipboard."""
+        data = []
+        for widget in self.widgets:
+            if widget.selected: data.append(widget.serialize())
+        
+        clipData = wx.CustomDataObject(wx.CustomDataFormat(StoryPanel.CLIPBOARD_FORMAT))
+        clipData.SetData(pickle.dumps(data, 1))
+        
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(clipData)
+            wx.TheClipboard.Close()
+            
+    def cutWidgets (self):
+        """Cuts selected widgets into the clipboard."""
+        self.copyWidgets()
+        self.eachSelectedWidget(lambda w: w.delete())
+        
+    def pasteWidgets (self):
+        """Pastes widgets into the clipboard."""
+        format = wx.CustomDataFormat(StoryPanel.CLIPBOARD_FORMAT)
+        
+        if wx.TheClipboard.Open() and wx.TheClipboard.IsSupported(format):
+            clipData = wx.CustomDataObject(format)
+            wx.TheClipboard.GetData(clipData)
+            wx.TheClipboard.Close()
+            data = pickle.loads(clipData.GetData())
+                        
+            self.eachWidget(lambda w: w.setSelected(False, False))
+            
+            for widget in data:
+                newPassage = PassageWidget(self, self.app, state = widget)
+                newPassage.findSpace()
+                newPassage.setSelected(True, False)
+                self.widgets.append(newPassage)
+        
     def startMarquee (self, event):
         """Starts a marquee selection."""
         if not self.draggingMarquee:
@@ -424,6 +460,7 @@ class StoryPanel (wx.ScrolledWindow):
     SCROLL_SPEED = 10
     EXTRA_SPACE = 200
     GRID_SPACING = 140
+    CLIPBOARD_FORMAT = 'TwinePassages'
     
 # context menu
 

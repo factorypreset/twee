@@ -78,11 +78,19 @@ class StoryFrame (wx.Frame):
         # Edit menu
         
         editMenu = wx.Menu()
+        
         editMenu.Append(wx.ID_UNDO, '&Undo\tCtrl-Z')
+        
         editMenu.AppendSeparator()
+        
         editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.cutWidgets(), id = wx.ID_CUT)
+        
         editMenu.Append(wx.ID_COPY, '&Copy\tCtrl-C')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.copyWidgets(), id = wx.ID_COPY)
+        
         editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.pasteWidgets(), id = wx.ID_PASTE)
         
         editMenu.Append(wx.ID_DELETE, '&Delete')
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
@@ -438,6 +446,25 @@ class StoryFrame (wx.Frame):
         
         revertItem = self.menus.FindItemById(wx.ID_REVERT_TO_SAVED)
         revertItem.Enable(self.saveDestination != '' and self.dirty)
+        
+        # Edit menu
+        
+        hasSelection = self.storyPanel.hasSelection()
+        cutItem = self.menus.FindItemById(wx.ID_CUT)
+        cutItem.Enable(hasSelection)
+        copyItem = self.menus.FindItemById(wx.ID_COPY)
+        copyItem.Enable(hasSelection)
+        deleteItem = self.menus.FindItemById(wx.ID_DELETE)
+        deleteItem.Enable(hasSelection)
+        
+        canPaste = False
+        
+        if wx.TheClipboard.Open():
+            canPaste = wx.TheClipboard.IsSupported(wx.CustomDataFormat(StoryPanel.CLIPBOARD_FORMAT))
+            wx.TheClipboard.Close()
+            
+        pasteItem = self.menus.FindItemById(wx.ID_PASTE)
+        pasteItem.Enable(canPaste)
         
         # View menu
         

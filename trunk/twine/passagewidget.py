@@ -25,39 +25,20 @@ class PassageWidget (wx.Panel):
         self.parent = parent
         self.app = app
         self.dragging = False
-        self.pos = (0, 0)
         pos = list(pos)
         
         if state:
             self.passage = state['passage']
-            pos = state['pos']
+            self.pos = state['pos']
             self.selected = state['selected']
         else:
             self.passage = tiddlywiki.Tiddler('')
             self.passage.title = title
-            self.passage.text = text   
+            self.passage.text = text
             self.selected = False
+            self.pos = list(pos)
+            self.findSpace(quietly = True)
         
-            # find an empty space for us to land into
-            # we 'cheat' by changing our pos property directly
-            # so that we can use intersectsAny(). At the end of
-            # the constructor, we call moveTo() anyhow.
-            
-            originalX = pos[0]
-            self.pos = pos
-            
-            while self.intersectsAny():
-                print 'overlaps'
-                self.pos[0] += PassageWidget.SIZE * 1.25
-                
-                rightEdge = self.pos[0] + PassageWidget.SIZE
-                maxWidth = self.parent.toLogical((self.parent.GetSize().width - self.parent.EXTRA_SPACE, -1), \
-                                                 scaleOnly = True)[0]
-                
-                if rightEdge > maxWidth:
-                    pos[0] = originalX
-                    pos[1] += PassageWidget.SIZE * 1.25
-                
         wx.Panel.__init__(self, parent, id, size = self.parent.toPixels(self.getSize(), scaleOnly = True), \
                           pos = self.parent.toPixels(self.pos))
                 
@@ -70,7 +51,7 @@ class PassageWidget (wx.Panel):
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, lambda e: self.Refresh())
         
-        self.moveTo(pos)
+        self.moveTo(self.pos)
         self.resize()
     
     def getSize (self):
@@ -103,9 +84,30 @@ class PassageWidget (wx.Panel):
         """Offsets this widget's position by logical coordinates."""
         self.moveTo((self.pos[0] + x, self.pos[1] + y))
  
+    def findSpace(self, quietly = False):
+        """
+        Moves this widget so it doesn't overlap any others. Pass quietly = True
+        to prevent this from actually moving itself onscreen, but regardless,
+        this always changes the object's pos property.
+        """        
+        originalX = self.pos[0]
+        
+        while self.intersectsAny():
+            self.pos[0] += self.parent.GRID_SPACING 
+            rightEdge = self.pos[0] + PassageWidget.SIZE
+            maxWidth = self.parent.toLogical((self.parent.GetSize().width - self.parent.EXTRA_SPACE, -1), \
+                                             scaleOnly = True)[0]
+            if rightEdge > maxWidth:
+                self.pos[0] = originalX
+                self.pos[1] += self.parent.GRID_SPACING
+                
+        if not quietly: self.moveTo(self.pos)
+         
     def setSelected (self, value, exclusive = True):
-        """Sets whether this widget should be selected. Pass a false value for \
-           exclusive to prevent other widgets from being deselected."""
+        """
+        Sets whether this widget should be selected. Pass a false value for
+        exclusive to prevent other widgets from being deselected.
+        """
         if (exclusive):
             self.parent.eachWidget(lambda i: i.setSelected(False, False))
         
