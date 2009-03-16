@@ -71,6 +71,11 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, self.revert, id = wx.ID_REVERT_TO_SAVED)
         
         fileMenu.AppendSeparator()
+
+        fileMenu.Append(StoryFrame.FILE_EXPORT_SOURCE, 'E&xport Source Code...')
+        self.Bind(wx.EVT_MENU, self.exportSource, id = StoryFrame.FILE_EXPORT_SOURCE)
+
+        fileMenu.AppendSeparator()
         
         fileMenu.Append(wx.ID_CLOSE, '&Close\tCtrl-W')
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), id = wx.ID_CLOSE)
@@ -139,6 +144,10 @@ class StoryFrame (wx.Frame):
         
         storyMenu.Append(wx.ID_EDIT, '&Edit Passage\tCtrl-E')
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.openEditor(e)), id = wx.ID_EDIT)
+
+        storyMenu.Append(StoryFrame.STORY_EDIT_FULLSCREEN, '&Edit Passage Text Fullscreen\tF12')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.openEditor(e, fullscreen = True)), \
+                  id = StoryFrame.STORY_EDIT_FULLSCREEN)
         
         storyMenu.Append(wx.ID_DELETE, '&Delete Passage')
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
@@ -321,6 +330,23 @@ class StoryFrame (wx.Frame):
         
         dialog.Destroy()
         
+    def exportSource (self, event = None):
+        """Asks the user to choose a file to export source to, then exports the wiki."""
+        dialog = wx.FileDialog(self, 'Export Source Code', os.getcwd(), "", \
+                         "Text File (*.txt)|*.txt", wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPath()
+            tw = TiddlyWiki()
+            
+            for widget in self.storyPanel.widgets:
+                tw.addTiddler(widget.passage)
+
+            dest = open(path, 'w')            
+            dest.write(tw.toTwee())
+            dest.close()
+
+        dialog.Destroy()
+
     def save (self, event = None):
         if (self.saveDestination == ''):
             self.saveAs()
@@ -355,7 +381,7 @@ class StoryFrame (wx.Frame):
         
         tw = TiddlyWiki()
         
-        for widget in self.storyPanel.passages:
+        for widget in self.storyPanel.widgets:
             tw.addTiddler(widget.passage)
         
         dest.write(tw.toHtml(self.app, self.target))
@@ -427,6 +453,13 @@ class StoryFrame (wx.Frame):
         
     def updateUI (self, event = None):
         """Adjusts menu items to reflect the current state."""
+
+        hasSelection = self.storyPanel.hasSelection()
+
+        canPaste = False
+        if wx.TheClipboard.Open():
+            canPaste = wx.TheClipboard.IsSupported(wx.CustomDataFormat(StoryPanel.CLIPBOARD_FORMAT))
+            wx.TheClipboard.Close()
         
         # window title
         
@@ -449,20 +482,12 @@ class StoryFrame (wx.Frame):
         
         # Edit menu
         
-        hasSelection = self.storyPanel.hasSelection()
         cutItem = self.menus.FindItemById(wx.ID_CUT)
         cutItem.Enable(hasSelection)
         copyItem = self.menus.FindItemById(wx.ID_COPY)
         copyItem.Enable(hasSelection)
         deleteItem = self.menus.FindItemById(wx.ID_DELETE)
-        deleteItem.Enable(hasSelection)
-        
-        canPaste = False
-        
-        if wx.TheClipboard.Open():
-            canPaste = wx.TheClipboard.IsSupported(wx.CustomDataFormat(StoryPanel.CLIPBOARD_FORMAT))
-            wx.TheClipboard.Close()
-            
+        deleteItem.Enable(hasSelection)      
         pasteItem = self.menus.FindItemById(wx.ID_PASTE)
         pasteItem.Enable(canPaste)
         
@@ -474,6 +499,12 @@ class StoryFrame (wx.Frame):
         toolbarItem.Check(self.storyPanel.snapping)
         
         # Story menu
+        
+        editItem = self.menus.FindItemById(wx.ID_EDIT)
+        editItem.Enable(hasSelection)
+        
+        editFullscreenItem = self.menus.FindItemById(StoryFrame.STORY_EDIT_FULLSCREEN)
+        editFullscreenItem.Enable(hasSelection and not self.storyPanel.hasMultipleSelection())
         
         rebuildItem = self.menus.FindItemById(StoryFrame.STORY_REBUILD)
         rebuildItem.Enable(self.buildDestination != '')
@@ -497,8 +528,6 @@ class StoryFrame (wx.Frame):
         else:
             self.showToolbar = True
             self.toolbar.Show()
-            
-        self.updateUI()
         
     def setDirty (self, value):
         """
@@ -518,26 +547,27 @@ class StoryFrame (wx.Frame):
     # menu constants
     # (that aren't already defined by wx)
     
-    FILE_PAGE_SETUP = 106       # release 3 :)
-    FILE_PRINT = 107            # release 3
-    FILE_IMPORT_SOURCE = 108    # release 2
-    FILE_EXPORT_SOURCE = 109    # release 2
+    FILE_PAGE_SETUP = 101       # release 3 :)
+    FILE_PRINT = 102            # release 3
+    FILE_IMPORT_SOURCE = 103    # release 2
+    FILE_EXPORT_SOURCE = 104
         
-    VIEW_SNAP = 305
-    VIEW_CLEANUP = 306
-    VIEW_TOOLBAR = 307
+    VIEW_SNAP = 301
+    VIEW_CLEANUP = 302
+    VIEW_TOOLBAR = 303
     
     STORY_NEW_PASSAGE = 401
-    STORY_BUILD = 404
-    STORY_REBUILD = 405
-    STORY_WORD_COUNT = 406
-    STORY_PROOF = 407
+    STORY_EDIT_FULLSCREEN = 402
+    STORY_BUILD = 403
+    STORY_REBUILD = 404
+    STORY_WORD_COUNT = 405
+    STORY_PROOF = 406
     
-    STORY_FORMAT_SUGARCANE = 408
-    STORY_FORMAT_JONAH = 409
-    STORY_FORMAT_TW1 = 410
-    STORY_FORMAT_TW2 = 411
-    STORY_FORMAT_HELP = 412
+    STORY_FORMAT_SUGARCANE = 407
+    STORY_FORMAT_JONAH = 408
+    STORY_FORMAT_TW1 = 409
+    STORY_FORMAT_TW2 = 410
+    STORY_FORMAT_HELP = 411
     
     HELP_MANUAL = 501
     HELP_GROUP = 502

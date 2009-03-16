@@ -262,7 +262,8 @@ class Tiddler:
 			output += ' ['
 			for tag in self.tags:
 				output += tag + ' '
-			output = output.trim()
+			output = output.strip()
+			output += ']'
 			
 		output += "\n" + self.text + "\n\n\n"
 		return output

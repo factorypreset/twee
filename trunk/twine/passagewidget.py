@@ -119,17 +119,19 @@ class PassageWidget (wx.Panel):
         if not self.parent.hasSelection(): self.setSelected(True)
         self.parent.startDrag(event, self)
     
-    def openEditor (self, event):
+    def openEditor (self, event, fullscreen = False):
         """Opens a PassageFrame to edit this passage."""
         if (not hasattr(self, 'passageFrame')):
             self.passageFrame = PassageFrame(None, self, self.app)
+            if fullscreen: self.passageFrame.openFullscreen()
         else:
             try:
                 self.passageFrame.Raise()
+                if fullscreen: self.passageFrame.openFullscreen()
             except wx._core.PyDeadObjectError:
                 # user closed the frame, so we need to recreate it
                 delattr(self, 'passageFrame')
-                self.openEditor(event)                
+                self.openEditor(event, fullscreen)                
 
     def delete (self, event = None):
         """Deletes this passage from onscreen."""

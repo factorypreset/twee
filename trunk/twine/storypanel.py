@@ -312,6 +312,15 @@ class StoryPanel (wx.ScrolledWindow):
         for widget in self.widgets:
             if widget.selected: return True
         return False
+    
+    def hasMultipleSelection (self):
+        """Returns whether multiple passages are selected."""
+        selected = 0
+        for widget in self.widgets:
+            if widget.selected:
+                selected += 1
+                if selected > 1: return True
+        return False
             
     def findWidget (self, title):
         """Returns a PassageWidget with the title passed. If none exists, it returns None."""
@@ -471,4 +480,4 @@ class StoryPanelContext (wx.Menu):
         
         newPassage = wx.MenuItem(self, wx.NewId(), 'New Passage Here')
         self.AppendItem(newPassage)
-        self.Bind(wx.EVT_MENU, lambda e: self.parent.newPassage(pos = pos), id = newPassage.GetId())
+        self.Bind(wx.EVT_MENU, lambda e: self.parent.newWidget(pos = pos), id = newPassage.GetId())
