@@ -85,7 +85,11 @@ class StoryFrame (wx.Frame):
         editMenu = wx.Menu()
         
         editMenu.Append(wx.ID_UNDO, '&Undo\tCtrl-Z')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.undo(), id = wx.ID_UNDO)
         
+        editMenu.Append(wx.ID_REDO, '&Redo\tCtrl-Y')
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.redo(), id = wx.ID_REDO)
+
         editMenu.AppendSeparator()
         
         editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
@@ -163,7 +167,7 @@ class StoryFrame (wx.Frame):
         storyMenu.Append(StoryFrame.STORY_PROOF, '&Proof Story...')
         self.Bind(wx.EVT_MENU, self.proof, id = StoryFrame.STORY_PROOF) 
 
-        storyMenu.Append(StoryFrame.STORY_WORD_COUNT, 'Word &Count\tCtrl-Y')
+        storyMenu.Append(StoryFrame.STORY_WORD_COUNT, 'Word &Count\tCtrl-I')
         self.Bind(wx.EVT_MENU, self.wordCount, id = StoryFrame.STORY_WORD_COUNT) 
         
         storyMenu.AppendSeparator()
@@ -482,6 +486,20 @@ class StoryFrame (wx.Frame):
         
         # Edit menu
         
+        undoItem = self.menus.FindItemById(wx.ID_UNDO)
+        undoItem.Enable(self.storyPanel.canUndo())
+        if self.storyPanel.canUndo():
+            undoItem.SetText('Undo ' + self.storyPanel.undoAction() + '\tCtrl-Z')
+        else:
+            undoItem.SetText("Can't Undo\tCtrl-Z")
+        
+        redoItem = self.menus.FindItemById(wx.ID_REDO)
+        redoItem.Enable(self.storyPanel.canRedo())
+        if self.storyPanel.canRedo():
+            redoItem.SetText('Redo ' + self.storyPanel.redoAction() + '\tCtrl-Y')
+        else:
+            redoItem.SetText("Can't Redo\tCtrl-Y")
+        
         cutItem = self.menus.FindItemById(wx.ID_CUT)
         cutItem.Enable(hasSelection)
         copyItem = self.menus.FindItemById(wx.ID_COPY)
@@ -529,14 +547,20 @@ class StoryFrame (wx.Frame):
             self.showToolbar = True
             self.toolbar.Show()
         
-    def setDirty (self, value):
+    def setDirty (self, value, name):
         """
         Sets the dirty flag to the value passed. Make sure to use this instead of
         setting the dirty property directly, as this method automatically updates
-        the pristine property as well
+        the pristine property as well.
+        
+        If you pass a name parameter, this action will be saved for undoing under
+        that name.
         """
         self.dirty = value
         self.pristine = False
+        
+        if value is True and name:
+            self.storyPanel.pushUndo(name)
         
     def serialize (self):
         """Returns a dictionary of state suitable for pickling."""

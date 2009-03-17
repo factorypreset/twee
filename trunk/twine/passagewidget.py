@@ -133,8 +133,9 @@ class PassageWidget (wx.Panel):
                 delattr(self, 'passageFrame')
                 self.openEditor(event, fullscreen)                
 
-    def delete (self, event = None):
+    def delete (self, event = None, quietly = False):
         """Deletes this passage from onscreen."""
+        if not quietly: self.parent.parent.setDirty(True, 'Delete')
         self.parent.removeWidget(self)
         self.Destroy()
 

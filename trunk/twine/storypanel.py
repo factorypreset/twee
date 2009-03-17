@@ -32,6 +32,8 @@ class StoryPanel (wx.ScrolledWindow):
         self.widgets = []
         self.draggingMarquee = False
         self.draggingWidgets = False
+        self.undoStack = []
+        self.undoPointer = -1
         
         if (state):
             self.scale = state['scale']
@@ -41,6 +43,9 @@ class StoryPanel (wx.ScrolledWindow):
         else:
             self.scale = 1
             self.newWidget(title = StoryPanel.FIRST_TITLE, text = StoryPanel.FIRST_TEXT)
+            
+        self.pushUndo(name = '')
+        self.undoPointer -= 1
 
         # cursors
         
@@ -148,7 +153,56 @@ class StoryPanel (wx.ScrolledWindow):
                 newPassage.findSpace()
                 newPassage.setSelected(True, False)
                 self.widgets.append(newPassage)
+                
+            self.parent.setDirty(True, name = 'Paste')
+                            
+    def pushUndo (self, name):
+        """
+        Pushes the current state onto the undo stack. The name parameter describes
+        the action that triggered this call, and is displayed in the Undo menu.
+        """
+        state = { 'name': name, 'widgets': [] }
+        for widget in self.widgets:
+            state['widgets'].append(widget.serialize())
+        self.undoStack.append(state)
+        self.undoPointer += 1
+        print self.undoStack
         
+    def undo (self):
+        """
+        Restores the undo state at self.undoPointer to the current view, then
+        decreases self.undoPointer by 1.
+        """
+        for widget in self.widgets: widget.delete(quietly = True)
+        state = self.undoStack[self.undoPointer]
+        print 'restoring to', state
+        for widget in state['widgets']:
+            self.widgets.append(PassageWidget(self, self.app, state = widget))
+        self.undoPointer -= 1
+
+    def redo (self):
+        """
+        Moves the undo pointer up 2, then calls undo() to restore state.
+        """
+        self.undoPointer += 2
+        self.undo()
+        
+    def canUndo (self):
+        """Returns whether an undo is available to the user."""
+        return self.undoPointer > -1
+
+    def undoAction (self):
+        """Returns the name of the action that the user will be undoing."""
+        return self.undoStack[self.undoPointer + 1]['name']
+    
+    def canRedo (self):
+        """Returns whether a redo is available to the user."""
+        return self.undoPointer < len(self.undoStack) - 2
+
+    def redoAction (self):
+        """Returns the name of the action that the user will be redoing."""
+        return self.undoStack[self.undoPointer + 2]['name']
+    
     def startMarquee (self, event):
         """Starts a marquee selection."""
         if not self.draggingMarquee:
@@ -184,7 +238,7 @@ class StoryPanel (wx.ScrolledWindow):
             for widget in self.widgets:
                 widget.setSelected(widget.intersects(logicalRect), False)
             
-            self.oldDirtyRect.Inflate(2, 2)   # don't know exactly, but sometimes we're off by 1
+            self.oldDirtyRect.Inflate(2, 2)   # don't know exactly why, but sometimes we're off by 1
             self.Refresh(True, self.oldDirtyRect)
         else:
             self.draggingMarquee = False
@@ -272,7 +326,7 @@ class StoryPanel (wx.ScrolledWindow):
                     
                 if goodDrag:
                     self.eachSelectedWidget(lambda w: self.snapWidget(w))
-                    self.parent.setDirty(True)
+                    self.parent.setDirty(True, name = 'Move')
                     self.resize()
                 else:
                     self.eachSelectedWidget(lambda w: w.moveTo(w.predragPos))
@@ -382,7 +436,6 @@ class StoryPanel (wx.ScrolledWindow):
                 actualSize = self.GetSize()
                 widthRatio = actualSize.width / neededSize[0]
                 heightRatio = actualSize.height / neededSize[1]
-                print 'width ratio', widthRatio, ', height ratio', heightRatio
                 self.scale = min(widthRatio, heightRatio)
                 self.Scroll(0, 0)
                 
@@ -470,6 +523,7 @@ class StoryPanel (wx.ScrolledWindow):
     EXTRA_SPACE = 200
     GRID_SPACING = 140
     CLIPBOARD_FORMAT = 'TwinePassages'
+    UNDO_LIMIT = 10
     
 # context menu
 
