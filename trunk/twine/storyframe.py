@@ -164,6 +164,11 @@ class StoryFrame (wx.Frame):
         storyMenu.Append(StoryFrame.STORY_REBUILD, '&Rebuild Story\tCtrl-R')
         self.Bind(wx.EVT_MENU, self.rebuild, id = StoryFrame.STORY_REBUILD) 
 
+        storyMenu.Append(StoryFrame.STORY_VIEW_LAST, '&View Last Build')
+        self.Bind(wx.EVT_MENU, self.viewBuild, id = StoryFrame.STORY_VIEW_LAST)
+
+        storyMenu.AppendSeparator()
+
         storyMenu.Append(StoryFrame.STORY_PROOF, '&Proof Story...')
         self.Bind(wx.EVT_MENU, self.proof, id = StoryFrame.STORY_PROOF) 
 
@@ -295,7 +300,7 @@ class StoryFrame (wx.Frame):
         self.app.recentFiles.Save(self.app.config)
         openedFile.close()
         
-    def revert (self, event):
+    def revert (self, event = None):
         """Reverts to the last saved version of the story file."""
         bits = os.path.splitext(self.saveDestination)
         title = os.path.basename(bits[0])
@@ -363,7 +368,7 @@ class StoryFrame (wx.Frame):
         dest.close()
         self.setDirty(False)
 
-    def build (self, event):
+    def build (self, event = None):
         """Asks the user to choose a location to save a compiled story, then passed control to rebuild()."""
         dialog = wx.FileDialog(self, 'Build Story', os.getcwd(), "", \
                          "Web Page (*.html)|*.html", \
@@ -375,9 +380,10 @@ class StoryFrame (wx.Frame):
         
         dialog.Destroy()
                 
-    def rebuild (self, event, displayAfter = False):
-        """Builds an HTML version of the story. Pass whether to open the destination file \
-           afterwards."""
+    def rebuild (self, event = None, displayAfter = False):
+        """
+        Builds an HTML version of the story. Pass whether to open the destination file afterwards.
+        """
 
         # open destination for writing
         
@@ -391,15 +397,17 @@ class StoryFrame (wx.Frame):
             tw.addTiddler(widget.passage)
         
         dest.write(tw.toHtml(self.app, self.target))
-        dest.close()
-
-        # open browser if requested
+        dest.close()        
+        if displayAfter: viewBuild()
+    
+    def viewBuild (self, event = None):
+        """
+        Opens the last built file in a Web browser.
+        """
+        path = 'file://' + urllib.pathname2url(self.buildDestination)
+        path = path.replace('file://///', 'file:///')
+        wx.LaunchDefaultBrowser(path)        
         
-        if displayAfter:
-            path = 'file://' + urllib.pathname2url(self.buildDestination)
-            path = path.replace('file://///', 'file:///')
-            wx.LaunchDefaultBrowser(path)
-            
     def wordCount (self, event = None):
         """
         Displays a word count to the user.
@@ -529,6 +537,9 @@ class StoryFrame (wx.Frame):
         rebuildItem = self.menus.FindItemById(StoryFrame.STORY_REBUILD)
         rebuildItem.Enable(self.buildDestination != '')
         
+        viewLastItem = self.menus.FindItemById(StoryFrame.STORY_VIEW_LAST)
+        viewLastItem.Enable(self.buildDestination != '')
+        
         # Story format submenu
         
         formatItems = {}
@@ -540,7 +551,7 @@ class StoryFrame (wx.Frame):
         for key in formatItems:
             formatItems[key].Check(self.target == key)
         
-    def toggleToolbar (self, event):
+    def toggleToolbar (self, event = None):
         """Toggles the toolbar onscreen."""
         if (self.showToolbar):
             self.showToolbar = False
@@ -549,7 +560,7 @@ class StoryFrame (wx.Frame):
             self.showToolbar = True
             self.toolbar.Show()
         
-    def setDirty (self, value, name):
+    def setDirty (self, value, name = None):
         """
         Sets the dirty flag to the value passed. Make sure to use this instead of
         setting the dirty property directly, as this method automatically updates
@@ -586,14 +597,15 @@ class StoryFrame (wx.Frame):
     STORY_EDIT_FULLSCREEN = 402
     STORY_BUILD = 403
     STORY_REBUILD = 404
-    STORY_WORD_COUNT = 405
-    STORY_PROOF = 406
+    STORY_VIEW_LAST = 405
+    STORY_WORD_COUNT = 406
+    STORY_PROOF = 407
     
-    STORY_FORMAT_SUGARCANE = 407
-    STORY_FORMAT_JONAH = 408
-    STORY_FORMAT_TW1 = 409
-    STORY_FORMAT_TW2 = 410
-    STORY_FORMAT_HELP = 411
+    STORY_FORMAT_SUGARCANE = 408
+    STORY_FORMAT_JONAH = 409
+    STORY_FORMAT_TW1 = 410
+    STORY_FORMAT_TW2 = 411
+    STORY_FORMAT_HELP = 412
     
     HELP_MANUAL = 501
     HELP_GROUP = 502

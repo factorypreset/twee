@@ -111,7 +111,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.snapping = True
         self.eachWidget(self.snapWidget)
         self.snapping = oldSnapping
-        self.parent.setDirty(True)
+        self.parent.setDirty(True, name = 'Clean Up')
         self.Refresh()
 
     def toggleSnapping (self):
