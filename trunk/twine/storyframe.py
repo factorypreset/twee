@@ -189,7 +189,9 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self.setTarget('tw'), id = StoryFrame.STORY_FORMAT_TW1) 
         
         storyFormatMenu.AppendSeparator()
+        
         storyFormatMenu.Append(StoryFrame.STORY_FORMAT_HELP, '&About Story Formats')        
+        self.Bind(wx.EVT_MENU, lambda e: self.app.storyFormatHelp(), id = StoryFrame.STORY_FORMAT_HELP)
         
         storyMenu.AppendMenu(wx.ID_ANY, 'Story &Format', storyFormatMenu)
         

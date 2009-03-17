@@ -7,6 +7,7 @@
 
 import sys, os, locale, wx, re
 from storyframe import StoryFrame
+from helpframe import HelpFrame
 
 class App:
 
@@ -27,7 +28,10 @@ class App:
         info.SetDescription('\nA tool for creating interactive stories\nwritten by Chris Klimas\n\nhttp://gimcrackd.com/etc/src/')
         info.SetCopyright('The Twee compiler and associated JavaScript files in this application are released under the GNU Public License.\n\nThe files in the targets directory are derivative works of Jeremy Ruston\'s TiddlyWiki project and are used under the terms of its license.')
         wx.AboutBox(info)
-        
+    
+    def storyFormatHelp (self, event = None):
+        wx.LaunchDefaultBrowser('http://gimcrackd.com/etc/doc/#simple,storyformats')
+    
     def openDocs (self, event = None):
         wx.LaunchDefaultBrowser('http://gimcrackd.com/etc/doc/')
         
