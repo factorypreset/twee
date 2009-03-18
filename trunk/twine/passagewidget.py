@@ -135,8 +135,7 @@ class PassageWidget (wx.Panel):
 
     def delete (self, event = None, quietly = False):
         """Deletes this passage from onscreen."""
-        if not quietly: self.parent.parent.setDirty(True, 'Delete')
-        self.parent.removeWidget(self)
+        self.parent.removeWidget(self, quietly)
         self.Destroy()
 
     def intersectsAny (self):

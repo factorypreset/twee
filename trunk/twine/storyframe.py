@@ -101,7 +101,7 @@ class StoryFrame (wx.Frame):
         editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.pasteWidgets(), id = wx.ID_PASTE)
         
-        editMenu.Append(wx.ID_DELETE, '&Delete')
+        editMenu.Append(wx.ID_DELETE, '&Delete\tDel')
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
 
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
@@ -560,20 +560,20 @@ class StoryFrame (wx.Frame):
             self.showToolbar = True
             self.toolbar.Show()
         
-    def setDirty (self, value, name = None):
+    def setDirty (self, value, action = None):
         """
         Sets the dirty flag to the value passed. Make sure to use this instead of
         setting the dirty property directly, as this method automatically updates
         the pristine property as well.
         
-        If you pass a name parameter, this action will be saved for undoing under
+        If you pass an action parameter, this action will be saved for undoing under
         that name.
         """
         self.dirty = value
         self.pristine = False
         
-        if value is True and name:
-            self.storyPanel.pushUndo(name)
+        if value is True and action:
+            self.storyPanel.pushUndo(action)
         
     def serialize (self):
         """Returns a dictionary of state suitable for pickling."""

@@ -42,9 +42,9 @@ class StoryPanel (wx.ScrolledWindow):
             if (hasattr(state, 'snapping')) and state['snapping']: self.snapping = True
         else:
             self.scale = 1
-            self.newWidget(title = StoryPanel.FIRST_TITLE, text = StoryPanel.FIRST_TEXT)
+            self.newWidget(title = StoryPanel.FIRST_TITLE, text = StoryPanel.FIRST_TEXT, quietly = True)
             
-        self.pushUndo(name = '')
+        self.pushUndo(action = '')
         self.undoPointer -= 1
 
         # cursors
@@ -64,7 +64,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
         self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newWidget(pos = e.GetPosition()))
 
-    def newWidget (self, title = None, text = '', pos = None):
+    def newWidget (self, title = None, text = '', pos = None, quietly = False):
         """Adds a new widget to the container."""
         
         # have to put this inside the method body
@@ -81,13 +81,15 @@ class StoryPanel (wx.ScrolledWindow):
         
         self.widgets.append(PassageWidget(self, self.app, title = title, text = text, pos = pos))
         self.resize()
+        if not quietly: self.parent.setDirty(True, action = 'New Passage')
 
-    def removeWidget (self, widget):
+    def removeWidget (self, widget, quietly = False):
         """
         Removes a widget from the container. This does not actually delete it from onscreen --
         see PassageWidget.delete() for that.
         """
         self.widgets.remove(widget)
+        if not quietly: self.parent.setDirty(True, action = 'Delete')
         
     def snapWidget (self, widget):
         """Snaps a widget to our grid if self.snapping is set."""
@@ -111,7 +113,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.snapping = True
         self.eachWidget(self.snapWidget)
         self.snapping = oldSnapping
-        self.parent.setDirty(True, name = 'Clean Up')
+        self.parent.setDirty(True, action = 'Clean Up')
         self.Refresh()
 
     def toggleSnapping (self):
@@ -154,28 +156,25 @@ class StoryPanel (wx.ScrolledWindow):
                 newPassage.setSelected(True, False)
                 self.widgets.append(newPassage)
                 
-            self.parent.setDirty(True, name = 'Paste')
+            self.parent.setDirty(True, action = 'Paste')
                             
-    def pushUndo (self, name):
+    def pushUndo (self, action):
         """
         Pushes the current state onto the undo stack. The name parameter describes
         the action that triggered this call, and is displayed in the Undo menu.
         """
-        state = { 'name': name, 'widgets': [] }
-        for widget in self.widgets:
-            state['widgets'].append(widget.serialize())
+        state = { 'action': action, 'widgets': [] }
+        for widget in self.widgets: state['widgets'].append(widget.serialize())
         self.undoStack.append(state)
         self.undoPointer += 1
-        print self.undoStack
         
     def undo (self):
         """
         Restores the undo state at self.undoPointer to the current view, then
         decreases self.undoPointer by 1.
         """
-        for widget in self.widgets: widget.delete(quietly = True)
+        while len(self.widgets): self.widgets[0].delete(quietly = True)
         state = self.undoStack[self.undoPointer]
-        print 'restoring to', state
         for widget in state['widgets']:
             self.widgets.append(PassageWidget(self, self.app, state = widget))
         self.undoPointer -= 1
@@ -193,7 +192,7 @@ class StoryPanel (wx.ScrolledWindow):
 
     def undoAction (self):
         """Returns the name of the action that the user will be undoing."""
-        return self.undoStack[self.undoPointer + 1]['name']
+        return self.undoStack[self.undoPointer + 1]['action']
     
     def canRedo (self):
         """Returns whether a redo is available to the user."""
@@ -201,7 +200,7 @@ class StoryPanel (wx.ScrolledWindow):
 
     def redoAction (self):
         """Returns the name of the action that the user will be redoing."""
-        return self.undoStack[self.undoPointer + 2]['name']
+        return self.undoStack[self.undoPointer + 2]['action']
     
     def startMarquee (self, event):
         """Starts a marquee selection."""
@@ -326,7 +325,7 @@ class StoryPanel (wx.ScrolledWindow):
                     
                 if goodDrag:
                     self.eachSelectedWidget(lambda w: self.snapWidget(w))
-                    self.parent.setDirty(True, name = 'Move')
+                    self.parent.setDirty(True, action = 'Move')
                     self.resize()
                 else:
                     self.eachSelectedWidget(lambda w: w.moveTo(w.predragPos))
