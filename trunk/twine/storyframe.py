@@ -12,9 +12,9 @@ from storypanel import StoryPanel
 
 class StoryFrame (wx.Frame):
     
-    def __init__(self, parent, app, pos = None, state = None):
+    def __init__(self, parent, app, state = None):
         wx.Frame.__init__(self, parent, wx.ID_ANY, title = StoryFrame.DEFAULT_TITLE, \
-                          size = StoryFrame.DEFAULT_SIZE, pos = pos)     
+                          size = StoryFrame.DEFAULT_SIZE)     
         self.app = app
         self.parent = parent
         self.pristine = True    # the user has not added any content to this at all
@@ -44,7 +44,7 @@ class StoryFrame (wx.Frame):
         fileMenu = wx.Menu()
         
         fileMenu.Append(wx.ID_NEW, '&New Story\tCtrl-Shift-N')
-        self.Bind(wx.EVT_MENU, self.newFrame, id = wx.ID_NEW)
+        self.Bind(wx.EVT_MENU, self.app.newStory, id = wx.ID_NEW)
         
         fileMenu.Append(wx.ID_OPEN, '&Open Story...\tCtrl-O')
         self.Bind(wx.EVT_MENU, self.openDialog, id = wx.ID_OPEN)
@@ -108,7 +108,9 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachWidget(lambda i: i.setSelected(True, exclusive = False)), id = wx.ID_SELECTALL)
         
         editMenu.AppendSeparator()
-        editMenu.Append(wx.ID_PREFERENCES, 'Preferences...')
+        
+        editMenu.Append(wx.ID_PREFERENCES, 'Preferences...\tCtrl-,')
+        self.Bind(wx.EVT_MENU, self.app.showPrefs, id = wx.ID_PREFERENCES)
         
         # View menu
  
@@ -267,11 +269,8 @@ class StoryFrame (wx.Frame):
         self.Show(True)
         
     def newFrame (self, event = None):
-        """Opens a new StoryFrame a bit below and to to the right of this one."""
-        pos = self.GetPosition()
-        pos.x += 25
-        pos.y += 25
-        StoryFrame(None, app = self.app, pos = (pos.x, pos.y))
+        """Opens a new StoryFrame."""
+        StoryFrame(None, app = self.app)
     
     def openDialog (self, event = None):
         """Opens a story file of the user's choice."""

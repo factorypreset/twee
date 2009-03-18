@@ -120,7 +120,10 @@ class PassageFrame (wx.Frame):
         """Updates the passage based on the inputs; asks our matching widget to repaint."""
         self.widget.passage.title = self.titleInput.GetValue()
         self.widget.passage.text = self.bodyInput.GetValue()
-        self.widget.passage.tags = list(self.tagsInput.GetValue().split(' '))
+        self.widget.passage.tags = []
+        
+        for tag in self.tagsInput.GetValue().split(' '):
+            if tag != '': self.widget.passage.tags.append(tag)
         
         self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
         self.widget.Refresh()
