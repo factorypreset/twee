@@ -178,6 +178,7 @@ class StoryPanel (wx.ScrolledWindow):
         for widget in state['widgets']:
             self.widgets.append(PassageWidget(self, self.app, state = widget))
         self.undoPointer -= 1
+        self.Refresh()
 
     def redo (self):
         """
@@ -472,7 +473,6 @@ class StoryPanel (wx.ScrolledWindow):
         # connectors
         
         gc.SetPen(wx.Pen(StoryPanel.CONNECTOR_COLOR))
-        
         for widget in self.widgets:            
             start = self.toPixels(widget.getCenter())
             for link in widget.passage.links():

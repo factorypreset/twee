@@ -211,8 +211,36 @@ class PassageWidget (wx.Panel):
 
     def paint (self, event):
         """Paints widget onscreen."""
-        dc = wx.BufferedPaintDC(self)
-        gc = wx.GraphicsContext.Create(dc)
+
+        def wordWrap (text, lineWidth, gc):
+            """
+            Returns a list of lines from a string 
+            This is somewhat based on the wordwrap function built into wx.lib.
+            (For some reason, GraphicsContext.GetPartialTextExtents()
+            is returning totally wrong numbers but GetTextExtent() works fine.)
+            
+            This assumes that you've already set up the font you want on the GC.
+            It gloms multiple spaces together, but for our purposes that's ok.
+            """
+            words = text.split()
+            lines = []
+            currentWidth = 0
+            currentLine = ''
+                        
+            for word in words:
+                wordWidth = gc.GetTextExtent(word + ' ')[0]
+                if currentWidth + wordWidth < lineWidth:
+                    currentLine += word + ' '
+                    currentWidth += wordWidth
+                else:
+                    lines.append(currentLine)
+                    currentLine = word + ' '
+                    currentWidth = wordWidth
+            
+            lines.append(currentLine)
+            return lines
+        
+        gc = wx.GraphicsContext.Create(wx.PaintDC(self))
         size = self.GetSize()
 
         # color scheme
@@ -265,13 +293,13 @@ class PassageWidget (wx.Panel):
 
         gc.ResetClip()
         gc.SetFont(excerptFont, colors['excerptText'])
-        excerptText = wx.lib.wordwrap.wordwrap(self.passage.text, size.width - (inset * 2), dc)
-
-        for line in excerptText.split("\n"):
+        excerptLines = wordWrap(self.passage.text, size.width - (inset * 2), gc)
+        
+        for line in excerptLines:
             gc.DrawText(line, inset, excerptTop)
             excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
             if excerptTop > size.height - inset: break
-    
+        
     def serialize (self):
         """Returns a dictionary with state information suitable for pickling."""
         return { 'selected': self.selected, 'pos': self.pos, 'passage': self.passage }
