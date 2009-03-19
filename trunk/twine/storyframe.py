@@ -498,7 +498,7 @@ class StoryFrame (wx.Frame):
         toolbarItem = self.menus.FindItemById(StoryFrame.VIEW_TOOLBAR)
         toolbarItem.Check(self.showToolbar)
         snapItem = self.menus.FindItemById(StoryFrame.VIEW_SNAP)
-        toolbarItem.Check(self.storyPanel.snapping)
+        snapItem.Check(self.storyPanel.snapping)
         
         # Story menu
         
@@ -533,6 +533,7 @@ class StoryFrame (wx.Frame):
         else:
             self.showToolbar = True
             self.toolbar.Show()
+        self.SendSizeEvent()
         
     def setDirty (self, value, action = None):
         """

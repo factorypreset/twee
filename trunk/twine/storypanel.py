@@ -497,8 +497,8 @@ class StoryPanel (wx.ScrolledWindow):
         neededSize = self.toPixels(self.getSize(), scaleOnly = True)
         visibleSize = self.GetClientSize()
         
-        maxWidth = max(neededSize[0], visibleSize[0]) + (visibleSize[0] * 0.5)
-        maxHeight = max(neededSize[1], visibleSize[1]) + (visibleSize[1] * 0.5)
+        maxWidth = max(neededSize[0], visibleSize[0]) + visibleSize[0]
+        maxHeight = max(neededSize[1], visibleSize[1]) + visibleSize[1]
         
         self.SetVirtualSize((maxWidth, maxHeight))
         self.SetScrollRate(StoryPanel.SCROLL_SPEED, StoryPanel.SCROLL_SPEED)
