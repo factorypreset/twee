@@ -461,16 +461,17 @@ class StoryPanel (wx.ScrolledWindow):
         # we already take into account our scroll origin in our
         # toPixels() method
         
-        dc = wx.PaintDC(self)
+        gc = wx.GraphicsContext.Create(wx.PaintDC(self))
         
         # background
         
-        dc.SetBackground(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
-        dc.Clear()
-        
+        size = self.GetSize()
+        gc.SetBrush(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
+        gc.DrawRectangle(0, 0, size.width, size.height)
+                
         # connectors
         
-        dc.SetPen(wx.Pen(StoryPanel.CONNECTOR_COLOR))
+        gc.SetPen(wx.Pen(StoryPanel.CONNECTOR_COLOR))
         
         for widget in self.widgets:            
             start = self.toPixels(widget.getCenter())
@@ -478,14 +479,14 @@ class StoryPanel (wx.ScrolledWindow):
                 otherWidget = self.findWidget(link)
                 if otherWidget:
                     end = self.toPixels(otherWidget.getCenter())
-                    dc.DrawLine(start[0], start[1], end[0], end[1])
+                    gc.StrokeLine(start[0], start[1], end[0], end[1])
         
         # marquee selection
         
         if self.draggingMarquee:
-            dc.SetPen(wx.Pen(StoryPanel.SELECT_COLOR, style = wx.DOT))
-            dc.SetBrush(wx.Brush('#000000', style = wx.TRANSPARENT))
-            dc.DrawRectangle(self.dragRect.x, self.dragRect.y, self.dragRect.width, self.dragRect.height)
+            gc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)))
+            gc.SetBrush(wx.Brush(StoryPanel.MARQUEE_COLOR, style = wx.TRANSPARENT))
+            gc.DrawRectangle(self.dragRect.x, self.dragRect.y, self.dragRect.width, self.dragRect.height)
             
     def resize (self, event = None):
         """
@@ -516,6 +517,7 @@ class StoryPanel (wx.ScrolledWindow):
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
     BACKGROUND_COLOR = '#2e3436'
+    MARQUEE_COLOR = '#4e5456'
     CONNECTOR_COLOR = '#888a85'
     SELECT_COLOR = '#ffffff'
     SCROLL_SPEED = 10

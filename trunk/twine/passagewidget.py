@@ -212,6 +212,7 @@ class PassageWidget (wx.Panel):
     def paint (self, event):
         """Paints widget onscreen."""
         dc = wx.BufferedPaintDC(self)
+        gc = wx.GraphicsContext.Create(dc)
         size = self.GetSize()
 
         # color scheme
@@ -236,26 +237,25 @@ class PassageWidget (wx.Panel):
 
         # frame
 
-        dc.SetPen(wx.Pen(colors['frame'], 1))
-        dc.SetBrush(wx.Brush(colors['body']))     
-        dc.DrawRectangle(0, 0, size.width, size.height)
+        gc.SetPen(wx.Pen(colors['frame'], 1))
+        gc.SetBrush(wx.Brush(colors['body']))     
+        gc.DrawRectangle(0, 0, size.width - 1, size.height - 1)
 
         # title shade
 
-        dc.SetBrush(wx.Brush(colors['titleShade']))
-        dc.SetPen(wx.Pen(colors['titleShade'], 1))            
+        gc.SetBrush(wx.Brush(colors['titleShade']))
+        gc.SetPen(wx.Pen(colors['titleShade'], 1))            
         titleShadeHeight = titleFontHeight + (2 * inset)
-        dc.DrawRectangle(1, 1, size.width - 2, titleShadeHeight - 2)
+        gc.DrawRectangle(1, 1, size.width - 3, titleShadeHeight - 3)
         
         # draw title
         # we let clipping prevent writing over the frame
         
-        dc.DestroyClippingRegion()
-        dc.SetClippingRect((inset, inset, size.width - (inset * 2), titleShadeHeight - 2))
-        dc.SetFont(titleFont)
-        dc.SetTextForeground(colors['titleText'])
-        dc.DrawText(self.passage.title, inset, inset)
-                        
+        gc.ResetClip()
+        gc.Clip(inset, inset, size.width - (inset * 2), titleShadeHeight - 2)
+        gc.SetFont(titleFont, colors['titleText'])
+        gc.DrawText(self.passage.title, inset, inset)
+        
         # draw excerpt
 
         excerptTop = inset + titleShadeHeight
@@ -263,13 +263,12 @@ class PassageWidget (wx.Panel):
         # we split the excerpt by line, then draw them in turn
         # (we use a library to determine breaks, but have to draw the lines ourselves)
 
-        dc.DestroyClippingRegion()
-        dc.SetFont(excerptFont)
-        dc.SetTextForeground(colors['excerptText'])
+        gc.ResetClip()
+        gc.SetFont(excerptFont, colors['excerptText'])
         excerptText = wx.lib.wordwrap.wordwrap(self.passage.text, size.width - (inset * 2), dc)
 
         for line in excerptText.split("\n"):
-            dc.DrawText(line, inset, excerptTop)
+            gc.DrawText(line, inset, excerptTop)
             excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
             if excerptTop > size.height - inset: break
     

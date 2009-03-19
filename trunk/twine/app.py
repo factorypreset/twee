@@ -5,7 +5,7 @@
 # This bootstraps our application and keeps track of preferences, etc.
 #
 
-import sys, os, locale, wx, re
+import sys, os, locale, re, pickle, wx
 from storyframe import StoryFrame
 from prefframe import PreferenceFrame
 
@@ -28,7 +28,7 @@ class App:
     def openDialog (self, event = None):
         """Opens a story file of the user's choice."""
         opened = False
-        dialog = wx.FileDialog(self, 'Open Story', os.getcwd(), "", "Tweepad Story (*.tws)|*.tws", \
+        dialog = wx.FileDialog(None, 'Open Story', os.getcwd(), "", "Tweepad Story (*.tws)|*.tws", \
                                wx.OPEN | wx.FD_CHANGE_DIR)                                        
         if dialog.ShowModal() == wx.ID_OK:
             opened = True
@@ -44,8 +44,8 @@ class App:
         """Opens a specific story file."""
         openedFile = open(path, 'r')
         self.stories.append(StoryFrame(None, app = self, state = pickle.load(openedFile)))
-        self.app.recentFiles.AddFileToHistory(path)
-        self.app.recentFiles.Save(self.config)
+        self.recentFiles.AddFileToHistory(path)
+        self.recentFiles.Save(self.config)
         openedFile.close()
         
     def exit (self, event = None):
