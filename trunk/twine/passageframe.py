@@ -98,6 +98,7 @@ class PassageFrame (wx.Frame):
         self.titleInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.tagsInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.bodyInput.Bind(wx.EVT_TEXT, self.syncPassage)
+        self.Bind(wx.EVT_CLOSE, self.closeFullscreen)
         
         if not re.match('Untitled Passage \d+', self.widget.passage.title):
             self.bodyInput.SetFocus()
@@ -133,9 +134,15 @@ class PassageFrame (wx.Frame):
     def openFullscreen (self, event = None):
         """Opens a FullscreenEditFrame for this passage's body text."""
         self.Hide()
-        FullscreenEditFrame(None, title = self.widget.passage.title + ' - ' + self.app.NAME, \
-                            initialText = self.widget.passage.text, callback = self.setBodyText, frame = self)
-        
+        self.fullscreen = FullscreenEditFrame(None, title = self.widget.passage.title + ' - ' + self.app.NAME, \
+                                              initialText = self.widget.passage.text, \
+                                              callback = self.setBodyText, frame = self)
+    
+    def closeFullscreen (self, event = None):
+        """Closes this editor's fullscreen counterpart, if any."""
+        try: self.fullscreen.Destroy()
+        except: return
+       
     def setBodyText (self, text):
         """Changes the body text field directly."""
         self.bodyInput.SetValue(text)

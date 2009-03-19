@@ -16,13 +16,41 @@ class App:
         locale.setlocale(locale.LC_ALL, '')
         self.wxApp = wx.PySimpleApp()
         self.config = wx.Config('Twine')
-        self.recentFiles = wx.FileHistory(5)
+        self.recentFiles = wx.FileHistory(App.RECENT_FILES)
         self.recentFiles.Load(self.config)
+        self.stories = []
         self.newStory()
         self.wxApp.MainLoop()
         
     def newStory (self, event = None):
-        StoryFrame(parent = None, app = self)
+        self.stories.append(StoryFrame(parent = None, app = self))
+        
+    def openDialog (self, event = None):
+        """Opens a story file of the user's choice."""
+        opened = False
+        dialog = wx.FileDialog(self, 'Open Story', os.getcwd(), "", "Tweepad Story (*.tws)|*.tws", \
+                               wx.OPEN | wx.FD_CHANGE_DIR)                                        
+        if dialog.ShowModal() == wx.ID_OK:
+            opened = True
+            self.open(dialog.GetPath())
+                    
+        dialog.Destroy()
+
+    def openRecent (self, index):
+        """Opens a recently-opened file."""
+        self.open(self.recentFiles.GetHistoryFile(index))
+    
+    def open (self, path):
+        """Opens a specific story file."""
+        openedFile = open(path, 'r')
+        self.stories.append(StoryFrame(None, app = self, state = pickle.load(openedFile)))
+        self.app.recentFiles.AddFileToHistory(path)
+        self.app.recentFiles.Save(self.config)
+        openedFile.close()
+        
+    def exit (self, event = None):
+        """Closes all open stories, implicitly quitting."""
+        map(lambda s: s.Close(), self.stories)
         
     def showPrefs (self, event = None):
         """Shows the preferences dialog."""
@@ -75,6 +103,7 @@ class App:
         return scriptPath
     
     NAME = 'Twine'
+    RECENT_FILES = 5
 
 # start things up if we were called directly
 

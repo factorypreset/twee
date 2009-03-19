@@ -47,17 +47,17 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, self.app.newStory, id = wx.ID_NEW)
         
         fileMenu.Append(wx.ID_OPEN, '&Open Story...\tCtrl-O')
-        self.Bind(wx.EVT_MENU, self.openDialog, id = wx.ID_OPEN)
+        self.Bind(wx.EVT_MENU, self.app.openDialog, id = wx.ID_OPEN)
 
         openRecent = wx.Menu()
         fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', openRecent)
         self.app.recentFiles.UseMenu(openRecent)
         self.app.recentFiles.AddFilesToMenu()
-        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(0), id = wx.ID_FILE1)
-        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(1), id = wx.ID_FILE2)
-        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(2), id = wx.ID_FILE3)
-        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(3), id = wx.ID_FILE4)
-        self.Bind(wx.EVT_MENU, lambda e: self.openRecent(4), id = wx.ID_FILE5)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(0), id = wx.ID_FILE1)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(1), id = wx.ID_FILE2)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(2), id = wx.ID_FILE3)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(3), id = wx.ID_FILE4)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(4), id = wx.ID_FILE5)
         
         fileMenu.AppendSeparator()
         
@@ -77,8 +77,11 @@ class StoryFrame (wx.Frame):
 
         fileMenu.AppendSeparator()
         
-        fileMenu.Append(wx.ID_CLOSE, '&Close\tCtrl-W')
+        fileMenu.Append(wx.ID_CLOSE, '&Close Story\tCtrl-W')
         self.Bind(wx.EVT_MENU, lambda e: self.Close(), id = wx.ID_CLOSE)
+        
+        fileMenu.Append(wx.ID_EXIT, 'E&xit Twine\tCtrl-Q')
+        self.Bind(wx.EVT_MENU, lambda e: self.app.exit(), id = wx.ID_EXIT)
         
         # Edit menu
         
@@ -268,37 +271,6 @@ class StoryFrame (wx.Frame):
         self.toolbar.Realize()
         self.Show(True)
         
-    def newFrame (self, event = None):
-        """Opens a new StoryFrame."""
-        StoryFrame(None, app = self.app)
-    
-    def openDialog (self, event = None):
-        """Opens a story file of the user's choice."""
-        opened = False
-        dialog = wx.FileDialog(self, 'Open Story', os.getcwd(), "", \
-                               "Tweepad Story (*.tws)|*.tws", \
-                               wx.OPEN | wx.FD_CHANGE_DIR)
-                                                          
-        if dialog.ShowModal() == wx.ID_OK:
-            opened = True
-            self.open(dialog.GetPath())
-                    
-        dialog.Destroy()
-        if opened and self.pristine: self.Destroy()
-
-    def openRecent (self, index):
-        """Opens a recently-opened file."""
-        self.open(self.app.recentFiles.GetHistoryFile(index))
-        if self.pristine: self.Destroy()
-    
-    def open (self, path):
-        """Opens a specific story file."""
-        openedFile = open(path, 'r')
-        StoryFrame(None, app = self.app, state = pickle.load(openedFile))
-        self.app.recentFiles.AddFileToHistory(path)
-        self.app.recentFiles.Save(self.app.config)
-        openedFile.close()
-        
     def revert (self, event = None):
         """Reverts to the last saved version of the story file."""
         bits = os.path.splitext(self.saveDestination)
@@ -325,7 +297,10 @@ class StoryFrame (wx.Frame):
             if (dialog.ShowModal() == wx.ID_NO):
                 event.Veto()
                 return
-            
+        
+        # ask all our widgets to close any editor windows
+        
+        map(lambda w: w.closeEditor(), self.storyPanel.widgets)
         event.Skip()
 
     def saveAs (self, event = None):

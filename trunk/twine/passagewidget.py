@@ -131,7 +131,13 @@ class PassageWidget (wx.Panel):
             except wx._core.PyDeadObjectError:
                 # user closed the frame, so we need to recreate it
                 delattr(self, 'passageFrame')
-                self.openEditor(event, fullscreen)                
+                self.openEditor(event, fullscreen)
+                
+    def closeEditor (self, event = None):
+        try: self.passageFrame.closeFullscreen()
+        except: pass
+        try: self.passageFrame.Destroy()
+        except: pass
 
     def delete (self, event = None, quietly = False):
         """Deletes this passage from onscreen."""
