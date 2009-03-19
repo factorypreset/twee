@@ -13,28 +13,27 @@ import wx, wx.stc
 
 class FullscreenEditFrame (wx.Frame):
     
-    def __init__ (self, parent, frame = None, title = '', initialText = '', callback = lambda i: i):
+    def __init__ (self, parent, app, frame = None, title = '', initialText = '', callback = lambda i: i):
         wx.Frame.__init__(self, parent, wx.ID_ANY, title = title, size = (400, 400))
+        self.app = app
         self.callback = callback
         self.frame = frame
         
         # margins
         
-        marginPanel = wx.Panel(self)
-        marginPanel.SetBackgroundColour(FullscreenEditFrame.BG_COLOR)
+        self.marginPanel = wx.Panel(self)
         marginSizer = wx.BoxSizer(wx.VERTICAL)  # doesn't really matter
-        marginPanel.SetSizer(marginSizer)
+        self.marginPanel.SetSizer(marginSizer)
         
         # content
         
-        panel = wx.Panel(marginPanel)
-        panel.SetBackgroundColour(FullscreenEditFrame.BG_COLOR)
+        self.panel = wx.Panel(self.marginPanel)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        marginSizer.Add(panel, 1, flag = wx.EXPAND | wx.LEFT | wx.RIGHT, border = 100)
+        marginSizer.Add(self.panel, 1, flag = wx.EXPAND | wx.LEFT | wx.RIGHT, border = 100)
         
         # controls
         
-        self.editCtrl = wx.stc.StyledTextCtrl(panel, style = wx.NO_BORDER | wx.TE_NO_VSCROLL | \
+        self.editCtrl = wx.stc.StyledTextCtrl(self.panel, style = wx.NO_BORDER | wx.TE_NO_VSCROLL | \
                                               wx.TE_MULTILINE | wx.TE_PROCESS_TAB)
         self.editCtrl.SetMargins(0, 0)
         self.editCtrl.SetMarginWidth(1, 0)
@@ -43,33 +42,15 @@ class FullscreenEditFrame (wx.Frame):
         self.editCtrl.SetUseHorizontalScrollBar(False)
         self.editCtrl.SetUseVerticalScrollBar(False)
         
-        directions = wx.StaticText(panel, label = FullscreenEditFrame.DIRECTIONS)
-        
-        # colors + layout
-
-        editFont = wx.Font(FullscreenEditFrame.DEFAULT_FONT_SIZE, wx.FONTFAMILY_MODERN, \
-                           wx.FONTSTYLE_NORMAL, wx.NORMAL, False, FullscreenEditFrame.DEFAULT_FONT)
+        self.directions = wx.StaticText(self.panel, label = FullscreenEditFrame.DIRECTIONS)
         labelFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         labelFont.SetPointSize(FullscreenEditFrame.LABEL_FONT_SIZE)
+        self.directions.SetFont(labelFont)
         
-        self.editCtrl.SetBackgroundColour(FullscreenEditFrame.BG_COLOR)
-        self.editCtrl.SetForegroundColour(FullscreenEditFrame.FG_COLOR)
-        self.editCtrl.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, FullscreenEditFrame.BG_COLOR)
-        self.editCtrl.SetCaretForeground(FullscreenEditFrame.FG_COLOR)
-        self.editCtrl.SetSelBackground(True, FullscreenEditFrame.FG_COLOR)
-        self.editCtrl.SetSelForeground(True, FullscreenEditFrame.BG_COLOR)
-        
-        defaultStyle = self.editCtrl.GetStyleAt(0)
-        self.editCtrl.StyleSetForeground(defaultStyle, FullscreenEditFrame.FG_COLOR)      
-        self.editCtrl.StyleSetBackground(defaultStyle, FullscreenEditFrame.BG_COLOR)      
-        self.editCtrl.StyleSetFont(defaultStyle, editFont)
-
-        directions.SetForegroundColour(FullscreenEditFrame.FG_COLOR)
-        directions.SetFont(labelFont)
-
+        self.applyPrefs()
         sizer.Add(self.editCtrl, 1, flag = wx.EXPAND | wx.ALL)
-        sizer.Add(directions, 0, flag = wx.TOP | wx.BOTTOM, border = 6)
-        panel.SetSizer(sizer)
+        sizer.Add(self.directions, 0, flag = wx.TOP | wx.BOTTOM, border = 6)
+        self.panel.SetSizer(sizer)
         
         # events
         
@@ -84,6 +65,32 @@ class FullscreenEditFrame (wx.Frame):
     def close (self):
         self.callback(self.editCtrl.GetText())
         self.Destroy()
+        
+    def applyPrefs (self):
+        """
+        Applies user preferences to this frame.
+        """
+        editFont = wx.Font(self.app.config.ReadInt('fsFontSize'), wx.FONTFAMILY_MODERN, \
+                           wx.FONTSTYLE_NORMAL, wx.NORMAL, False, self.app.config.Read('fsFontFace'))
+        bgColor = self.app.config.Read('fsBgColor')
+        textColor = self.app.config.Read('fsTextColor')
+        
+        self.panel.SetBackgroundColour(bgColor)
+        self.marginPanel.SetBackgroundColour(bgColor)        
+        
+        self.editCtrl.SetBackgroundColour(bgColor)
+        self.editCtrl.SetForegroundColour(textColor)
+        self.editCtrl.StyleSetBackground(wx.stc.STC_STYLE_DEFAULT, bgColor)
+        self.editCtrl.SetCaretForeground(textColor)
+        self.editCtrl.SetSelBackground(True, textColor)
+        self.editCtrl.SetSelForeground(True, bgColor)
+        
+        defaultStyle = self.editCtrl.GetStyleAt(0)
+        self.editCtrl.StyleSetForeground(defaultStyle, textColor)      
+        self.editCtrl.StyleSetBackground(defaultStyle, bgColor)      
+        self.editCtrl.StyleSetFont(defaultStyle, editFont)
+
+        self.directions.SetForegroundColour(textColor)
 
     def keyListener (self, event):
         """
@@ -101,8 +108,4 @@ class FullscreenEditFrame (wx.Frame):
         event.Skip()
         
     DIRECTIONS = 'Press Escape to close this passage, F12 to leave fullscreen.'
-    DEFAULT_FONT = 'Consolas'
-    DEFAULT_FONT_SIZE = 18
     LABEL_FONT_SIZE = 12
-    BG_COLOR = '#100088'
-    FG_COLOR = '#afcdff'

@@ -15,7 +15,7 @@ class App:
         """Initializes the application."""
         locale.setlocale(locale.LC_ALL, '')
         self.wxApp = wx.PySimpleApp()
-        self.config = wx.Config('Twine')
+        self.loadPrefs()
         self.recentFiles = wx.FileHistory(App.RECENT_FILES)
         self.recentFiles.Load(self.config)
         self.stories = []
@@ -88,6 +88,29 @@ class App:
     def reportBug (self, event = None):
         """Opens the online bug report form."""
         wx.LaunchDefaultBrowser('http://code.google.com/p/twee/issues/entry')
+
+    def loadPrefs (self):
+        """Loads user preferences into self.config, setting up defaults if none are set."""
+        self.config = wx.Config('Twine')
+        
+        monoFont = wx.SystemSettings.GetFont(wx.SYS_ANSI_FIXED_FONT)
+        
+        if not self.config.HasEntry('fsTextColor'):
+            self.config.Write('fsTextColor', '#afcdff')
+        if not self.config.HasEntry('fsBgColor'):
+            self.config.Write('fsBgColor', '#100088')
+        if not self.config.HasEntry('fsFontFace'):
+            self.config.Write('fsFontFace', monoFont.GetFaceName())
+        if not self.config.HasEntry('fsFontSize'):
+            self.config.WriteInt('fsFontSize', 16)
+        if not self.config.HasEntry('windowedFontFace'):
+            self.config.Write('windowedFontFace', monoFont.GetFaceName())
+        if not self.config.HasEntry('windowedFontSize'):
+            self.config.WriteInt('windowedFontSize', 10)
+            
+    def applyPrefs (self):
+        """Asks all of our stories to update themselves based on a preference change."""
+        map(lambda s: s.applyPrefs(), self.stories)
 
     def getPath (self):
         """Returns the path to the executing script or application."""

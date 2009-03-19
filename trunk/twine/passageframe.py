@@ -58,6 +58,8 @@ class PassageFrame (wx.Frame):
         # controls
         
         self.panel = wx.Panel(self)
+        allSizer = wx.BoxSizer(wx.VERTICAL)
+        self.panel.SetSizer(allSizer)
         
         # title/tag controls
         
@@ -78,18 +80,13 @@ class PassageFrame (wx.Frame):
         # body text
         
         self.bodyInput = wx.TextCtrl(self.panel, style = wx.TE_MULTILINE | wx.TE_PROCESS_TAB)
-        self.bodyInput.SetFont(wx.Font(PassageFrame.BODY_DEFAULT_SIZE, wx.MODERN, \
-                                       wx.NORMAL, wx.NORMAL, False, PassageFrame.BODY_DEFAULT_FONT))
         
         # final layout
         
-        allSizer = wx.BoxSizer(wx.VERTICAL)
         allSizer.Add(self.topControls, flag = wx.ALL | wx.EXPAND, border = PassageFrame.SPACING)
         allSizer.Add(self.bodyInput, proportion = 1, flag = wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, \
                      border = PassageFrame.SPACING)
-
-        self.panel.SetSizer(allSizer)
-
+        self.applyPrefs()
         self.syncInputs()
         
         # event bindings
@@ -134,19 +131,27 @@ class PassageFrame (wx.Frame):
     def openFullscreen (self, event = None):
         """Opens a FullscreenEditFrame for this passage's body text."""
         self.Hide()
-        self.fullscreen = FullscreenEditFrame(None, title = self.widget.passage.title + ' - ' + self.app.NAME, \
+        self.fullscreen = FullscreenEditFrame(None, self.app, \
+                                              title = self.widget.passage.title + ' - ' + self.app.NAME, \
                                               initialText = self.widget.passage.text, \
                                               callback = self.setBodyText, frame = self)
     
     def closeFullscreen (self, event = None):
         """Closes this editor's fullscreen counterpart, if any."""
         try: self.fullscreen.Destroy()
-        except: return
+        except: pass
+        event.Skip()
        
     def setBodyText (self, text):
         """Changes the body text field directly."""
         self.bodyInput.SetValue(text)
         self.Show(True)
+        
+    def applyPrefs (self):
+        """Applies user prefs to this frame."""
+        bodyFont = wx.Font(self.app.config.ReadInt('windowedFontSize'), wx.MODERN, wx.NORMAL, \
+                           wx.NORMAL, False, self.app.config.Read('windowedFontFace'))
+        self.bodyInput.SetFont(bodyFont)        
         
     # control constants
     
@@ -154,12 +159,7 @@ class PassageFrame (wx.Frame):
     SPACING = 6
     TITLE_LABEL = 'Title'
     TAGS_LABEL = 'Tags (separate with spaces)'
-    
-    # appearance constants
-    
-    BODY_DEFAULT_SIZE = 10
-    BODY_DEFAULT_FONT = 'Consolas'
-    
+        
     # menu constants (not defined by wx)
     
     PASSAGE_FULLSCREEN = 1002

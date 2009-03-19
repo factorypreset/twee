@@ -168,6 +168,13 @@ class PassageWidget (wx.Panel):
             other = wx.Rect(other.pos[0], other.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
         return selfRect.Intersects(other)
 
+    def applyPrefs (self):
+        """Passes on the message to any editor windows."""
+        try: self.passageFrame.applyPrefs()
+        except: pass
+        try: self.passageFrame.fullscreen.applyPrefs()
+        except: pass
+
     def resize (self):
         """Resizes widget onscreen based on parent panel scale."""
         size = self.parent.toPixels(self.getSize(), scaleOnly = True)
