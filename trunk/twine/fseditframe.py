@@ -58,7 +58,7 @@ class FullscreenEditFrame (wx.Frame):
         self.editCtrl.Bind(wx.EVT_KEY_DOWN, self.keyListener)
         
         self.editCtrl.SetFocus()
-        self.editCtrl.SetSelection(0, 0)
+        self.editCtrl.SetSelection(-1, -1)
         self.Show(True)
         self.ShowFullScreen(True)
 

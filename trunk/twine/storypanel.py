@@ -137,7 +137,8 @@ class StoryPanel (wx.ScrolledWindow):
     def cutWidgets (self):
         """Cuts selected widgets into the clipboard."""
         self.copyWidgets()
-        self.eachSelectedWidget(lambda w: w.delete())
+        self.eachSelectedWidget(lambda w: self.widgets.remove(w))
+        self.Refresh()
         
     def pasteWidgets (self):
         """Pastes widgets into the clipboard."""
@@ -158,6 +159,7 @@ class StoryPanel (wx.ScrolledWindow):
                 self.widgets.append(newPassage)
                 
             self.parent.setDirty(True, action = 'Paste')
+            self.Refresh()
                             
     def pushUndo (self, action):
         """
@@ -213,7 +215,7 @@ class StoryPanel (wx.ScrolledWindow):
         
         for widget in self.widgets:
             if widget.getLogicalRect().Contains(logicalClick):
-                if not self.hasSelection(): widget.setSelected(True)
+                if not widget.selected: widget.setSelected(True, not event.ShiftDown())
                 self.startDrag(event, widget)
                 return
         
@@ -292,6 +294,8 @@ class StoryPanel (wx.ScrolledWindow):
             self.dragCurrent = event.GetPosition()
             self.oldDirtyRect = clickedWidget.getPixelRect()
             
+            # if 
+            
             # have selected widgets remember their original position
             # in case they need to snap back to it after a bad drag
             
@@ -363,7 +367,11 @@ class StoryPanel (wx.ScrolledWindow):
                     self.parent.setDirty(True, action = 'Move')
                     self.resize()
                 else:
-                    self.eachSelectedWidget(lambda w: w.moveTo(w.predragPos))
+                    for widget in self.widgets:
+                        if widget.selected:
+                            widget.pos = widget.predragPos
+                            widget.setDimmed(False)
+                    self.Refresh()
             else:
                 # change the selection
                 self.clickedWidget.setSelected(True, not event.ShiftDown())
@@ -557,8 +565,8 @@ class StoryPanel (wx.ScrolledWindow):
     INSET = (10, 10)
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
-    BACKGROUND_COLOR = '#2e3436'
-    CONNECTOR_COLOR = '#888a85'
+    BACKGROUND_COLOR = '#555753'
+    CONNECTOR_COLOR = '#babdb6'
     MARQUEE_ALPHA = 32 # out of 256
     SCROLL_SPEED = 25
     EXTRA_SPACE = 200

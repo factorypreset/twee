@@ -99,6 +99,7 @@ class PassageFrame (wx.Frame):
         
         if not re.match('Untitled Passage \d+', self.widget.passage.title):
             self.bodyInput.SetFocus()
+            self.bodyInput.SetInsertionPoint(self.bodyInput.GetLastPosition())
         self.Show(True)
 
     def syncInputs (self):

@@ -212,12 +212,12 @@ class PassageWidget:
 
         def dim (c, dim):
             """Lowers a color's alpha if dim is true."""
-            if isinstance(c, wx.Color): c = c.Get()
-            
-            alpha = wx.ALPHA_OPAQUE
-            if dim:
-                alpha = PassageWidget.DIMMED_ALPHA
-            return wx.Color(c[0], c[1], c[2], alpha)
+            if isinstance(c, wx.Color): c = list(c.Get(includeAlpha = True))
+            if len(c) < 4:
+                c = list(c)
+                c.append(255)
+            if dim: c[3] *= PassageWidget.DIMMED_ALPHA
+            return wx.Color(c[0], c[1], c[2], c[3])
                 
         pixPos = self.parent.toPixels(self.pos)
         pixSize = self.parent.toPixels(self.getSize(), scaleOnly = True)
@@ -250,9 +250,12 @@ class PassageWidget:
         gc.DrawRectangle(pixPos[0], pixPos[1], pixSize[0] - 1, pixSize[1] - 1)
         
         # title bar
-        # we don't draw anything as background here
         
         titleBarHeight = titleFontHeight + (2 * inset)
+        titleBarColor = dim(PassageWidget.COLORS['titleBar'], self.dimmed)
+        gc.SetPen(wx.Pen(titleBarColor, 1))
+        gc.SetBrush(wx.Brush(titleBarColor))
+        gc.DrawRectangle(pixPos[0] + 1, pixPos[1] + 1, pixSize[0] - 3, titleBarHeight)
         
         # draw title
         # we let clipping prevent writing over the frame
@@ -299,9 +302,10 @@ class PassageWidget:
     COLORS = { 'frame': (0, 0, 0), \
                'bodyStart': (238, 238, 236), \
                'bodyEnd': (175, 175, 175), \
-               'titleText': (0, 0, 0), 
+               'titleBar': (52, 101, 164), \
+               'titleText': (255, 255, 255), \
                'excerptText': (0, 0, 0) }
-    DIMMED_ALPHA = 64 # out of 256
+    DIMMED_ALPHA = 0.25
     TITLE_SIZE = 9
     MAX_TITLE_SIZE = 18
     MAX_EXCERPT_SIZE = 10
