@@ -17,7 +17,7 @@
 import math, wx, wx.lib.wordwrap, storypanel, tiddlywiki
 from passageframe import PassageFrame
 
-class PassageWidget (wx.Panel):
+class PassageWidget:
     
     def __init__ (self, parent, app, id = wx.ID_ANY, pos = (0, 0), title = '', text = '', state = None):
         # inner state
@@ -25,6 +25,7 @@ class PassageWidget (wx.Panel):
         self.parent = parent
         self.app = app
         self.dragging = False
+        self.dimmed = False
         pos = list(pos)
         
         if state:
@@ -37,23 +38,8 @@ class PassageWidget (wx.Panel):
             self.passage.text = text
             self.selected = False
             self.pos = list(pos)
-            self.findSpace(quietly = True)
-        
-        wx.Panel.__init__(self, parent, id, size = self.parent.toPixels(self.getSize(), scaleOnly = True), \
-                          pos = self.parent.toPixels(self.pos))
-                
-        # events
-        
-        self.Bind(wx.EVT_LEFT_DOWN, self.startDrag)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.openEditor)
-        self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(PassageWidgetContext(self), e.GetPosition()))
-        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)  
-        self.Bind(wx.EVT_PAINT, self.paint)
-        self.Bind(wx.EVT_SIZE, lambda e: self.Refresh())
-        
-        self.moveTo(self.pos)
-        self.resize()
-    
+            self.findSpace()
+            
     def getSize (self):
         """Returns this instance's logical size."""
         return (PassageWidget.SIZE, PassageWidget.SIZE)
@@ -64,32 +50,25 @@ class PassageWidget (wx.Panel):
         pos[0] += self.getSize()[0] / 2
         pos[1] += self.getSize()[1] / 2
         return pos
-    
+
+    def getLogicalRect (self):
+        """Returns this instance's rectangle in logical coordinates."""
+        return wx.Rect(self.pos[0], self.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
+
     def getPixelRect (self):
         """Returns this instance's rectangle onscreen."""
         origin = self.parent.toPixels(self.pos)
         size = self.parent.toPixels((PassageWidget.SIZE, -1), scaleOnly = True)[0]
         return wx.Rect(origin[0], origin[1], size, size)
-    
-    def moveTo (self, pos):
-        """
-        Moves this instance to the logical position passed. You must
-        call this instead of manipulating the pos property directly,
-        because this moves the widget to the correct pixel position as well.
-        """
-        self.pos = pos
-        self.SetPosition(self.parent.toPixels(self.pos))
- 
+     
     def offset (self, x = 0, y = 0):
         """Offsets this widget's position by logical coordinates."""
-        self.moveTo((self.pos[0] + x, self.pos[1] + y))
+        self.pos = list(self.pos)
+        self.pos[0] += x
+        self.pos[1] += y
  
-    def findSpace(self, quietly = False):
-        """
-        Moves this widget so it doesn't overlap any others. Pass quietly = True
-        to prevent this from actually moving itself onscreen, but regardless,
-        this always changes the object's pos property.
-        """        
+    def findSpace(self):
+        """Moves this widget so it doesn't overlap any others."""        
         originalX = self.pos[0]
         
         while self.intersectsAny():
@@ -100,26 +79,29 @@ class PassageWidget (wx.Panel):
             if rightEdge > maxWidth:
                 self.pos[0] = originalX
                 self.pos[1] += self.parent.GRID_SPACING
-                
-        if not quietly: self.moveTo(self.pos)
-         
+        
+                 
     def setSelected (self, value, exclusive = True):
         """
         Sets whether this widget should be selected. Pass a false value for
         exclusive to prevent other widgets from being deselected.
-        """
+        """        
         if (exclusive):
             self.parent.eachWidget(lambda i: i.setSelected(False, False))
         
+        old = self.selected
         self.selected = value
-        self.Refresh()
+        if self.selected != old: self.parent.Refresh(True, self.getPixelRect())
         
-    def startDrag (self, event):
-        """Starts a drag and hands off execution to StoryPanel to track it."""
-        if not self.parent.hasSelection(): self.setSelected(True)
-        self.parent.startDrag(event, self)
-    
-    def openEditor (self, event, fullscreen = False):
+    def setDimmed (self, value):
+        """Sets whether this widget should be dimmed."""
+        self.dimmed = value
+
+    def openContextMenu (self, event):
+        """Opens a contextual menu at the event position given."""
+        self.parent.PopupMenu(PassageWidgetContext(self), event.GetPosition())
+        
+    def openEditor (self, event = None, fullscreen = False):
         """Opens a PassageFrame to edit this passage."""
         if (not hasattr(self, 'passageFrame')):
             self.passageFrame = PassageFrame(None, self, self.app)
@@ -139,11 +121,6 @@ class PassageWidget (wx.Panel):
         try: self.passageFrame.Destroy()
         except: pass
 
-    def delete (self, event = None, quietly = False):
-        """Deletes this passage from onscreen."""
-        self.parent.removeWidget(self, quietly)
-        self.Destroy()
-
     def intersectsAny (self):
         """Returns whether this widget intersects any other in the same StoryPanel."""
         intersects = False
@@ -162,25 +139,18 @@ class PassageWidget (wx.Panel):
         Returns whether this widget intersects another widget or wx.Rect.
         This uses logical coordinates, so you can do this without actually moving the widget onscreen.
         """   
-        selfRect = wx.Rect(self.pos[0], self.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
+        selfRect = self.getLogicalRect()
         
         if isinstance(other, PassageWidget):
             other = wx.Rect(other.pos[0], other.pos[1], PassageWidget.SIZE, PassageWidget.SIZE)
         return selfRect.Intersects(other)
-
+    
     def applyPrefs (self):
         """Passes on the message to any editor windows."""
         try: self.passageFrame.applyPrefs()
         except: pass
         try: self.passageFrame.fullscreen.applyPrefs()
         except: pass
-
-    def resize (self):
-        """Resizes widget onscreen based on parent panel scale."""
-        size = self.parent.toPixels(self.getSize(), scaleOnly = True)
-        size = map(lambda i: max(i, PassageWidget.MIN_PIXEL_SIZE), size)
-        pos = self.parent.toPixels(self.pos)
-        self.SetDimensions(pos[0], pos[1], size[0], size[1])
 
     def dirtyPixelRect (self):
         """
@@ -209,8 +179,8 @@ class PassageWidget (wx.Panel):
 
         return dirtyRect
 
-    def paint (self, event):
-        """Paints widget onscreen."""
+    def paint (self, gc):
+        """Paints widget to the graphics context passed."""
 
         def wordWrap (text, lineWidth, gc):
             """
@@ -226,7 +196,7 @@ class PassageWidget (wx.Panel):
             lines = []
             currentWidth = 0
             currentLine = ''
-                        
+            
             for word in words:
                 wordWidth = gc.GetTextExtent(word + ' ')[0]
                 if currentWidth + wordWidth < lineWidth:
@@ -239,14 +209,18 @@ class PassageWidget (wx.Panel):
             
             lines.append(currentLine)
             return lines
-        
-        gc = wx.GraphicsContext.Create(wx.PaintDC(self))
-        size = self.GetSize()
 
-        # color scheme
-        
-        if self.selected: colors = PassageWidget.SELECTED_COLORS
-        else: colors = PassageWidget.UNSELECTED_COLORS
+        def dim (c, dim):
+            """Lowers a color's alpha if dim is true."""
+            if isinstance(c, wx.Color): c = c.Get()
+            
+            alpha = wx.ALPHA_OPAQUE
+            if dim:
+                alpha = PassageWidget.DIMMED_ALPHA
+            return wx.Color(c[0], c[1], c[2], alpha)
+                
+        pixPos = self.parent.toPixels(self.pos)
+        pixSize = self.parent.toPixels(self.getSize(), scaleOnly = True)
 
         # text font sizes
         # wxWindows works with points, so we need to doublecheck on actual pixels
@@ -264,41 +238,57 @@ class PassageWidget (wx.Panel):
         inset = titleFontHeight / 3
 
         # frame
-
-        gc.SetPen(wx.Pen(colors['frame'], 1))
-        gc.SetBrush(wx.Brush(colors['body']))     
-        gc.DrawRectangle(0, 0, size.width - 1, size.height - 1)
-
-        # title shade
-
-        gc.SetBrush(wx.Brush(colors['titleShade']))
-        gc.SetPen(wx.Pen(colors['titleShade'], 1))            
-        titleShadeHeight = titleFontHeight + (2 * inset)
-        gc.DrawRectangle(1, 1, size.width - 3, titleShadeHeight - 3)
+        
+        frameColor = dim(PassageWidget.COLORS['frame'], self.dimmed)
+        frameInterior = (dim(PassageWidget.COLORS['bodyStart'], self.dimmed), \
+                         dim(PassageWidget.COLORS['bodyEnd'], self.dimmed))
+        
+        gc.SetPen(wx.Pen(frameColor, 1))
+        gc.SetBrush(gc.CreateLinearGradientBrush(pixPos[0], pixPos[1], \
+                                                 pixPos[0], pixPos[1] + pixSize[1], \
+                                                 frameInterior[0], frameInterior[1]))     
+        gc.DrawRectangle(pixPos[0], pixPos[1], pixSize[0] - 1, pixSize[1] - 1)
+        
+        # title bar
+        # we don't draw anything as background here
+        
+        titleBarHeight = titleFontHeight + (2 * inset)
         
         # draw title
         # we let clipping prevent writing over the frame
         
         gc.ResetClip()
-        gc.Clip(inset, inset, size.width - (inset * 2), titleShadeHeight - 2)
-        gc.SetFont(titleFont, colors['titleText'])
-        gc.DrawText(self.passage.title, inset, inset)
+        gc.Clip(pixPos[0] + inset, pixPos[1] + inset, pixSize[0] - (inset * 2), titleBarHeight - 2)
+        titleTextColor = dim(PassageWidget.COLORS['titleText'], self.dimmed)
+        gc.SetFont(titleFont, titleTextColor)
+        gc.DrawText(self.passage.title, pixPos[0] + inset, pixPos[1] + inset)
         
         # draw excerpt
 
-        excerptTop = inset + titleShadeHeight
+        excerptTop = pixPos[1] + inset + titleBarHeight
 
         # we split the excerpt by line, then draw them in turn
         # (we use a library to determine breaks, but have to draw the lines ourselves)
 
         gc.ResetClip()
-        gc.SetFont(excerptFont, colors['excerptText'])
-        excerptLines = wordWrap(self.passage.text, size.width - (inset * 2), gc)
+        excerptTextColor = dim(PassageWidget.COLORS['excerptText'], self.dimmed)
+        gc.SetFont(excerptFont, excerptTextColor)
+        excerptLines = wordWrap(self.passage.text, pixSize[0] - (inset * 2), gc)
         
         for line in excerptLines:
-            gc.DrawText(line, inset, excerptTop)
+            gc.DrawText(line, pixPos[0] + inset, excerptTop)
             excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
-            if excerptTop > size.height - inset: break
+            if excerptTop > (pixPos[1] + pixSize[1]) - inset: break
+            
+        # finally, draw a selection over ourselves if we're selected
+        
+        if self.selected:
+            color = dim(wx.SystemSettings_GetColour(wx.SYS_COLOUR_HIGHLIGHT), self.dimmed)
+            gc.SetPen(wx.Pen(color, 2))
+            r, g, b = color.Get()
+            color = wx.Color(r, g, b, 64)
+            gc.SetBrush(wx.Brush(color))
+            gc.DrawRectangle(pixPos[0] + 1, pixPos[1] + 1, pixSize[0] - 2, pixSize[1] - 2)
         
     def serialize (self):
         """Returns a dictionary with state information suitable for pickling."""
@@ -306,10 +296,12 @@ class PassageWidget (wx.Panel):
     
     MIN_PIXEL_SIZE = 10
     SIZE = 120
-    UNSELECTED_COLORS = { 'frame': '#000000', 'titleShade': '#729fcf', 'body': '#eeeeec', \
-                          'titleText': '#ffffff', 'excerptText': '#000000' }
-    SELECTED_COLORS = { 'frame': '#ffffff', 'titleShade': '#204a87', 'body': '#000000', \
-                        'titleText': '#000000', 'excerptText': '#eeeeec' }
+    COLORS = { 'frame': (0, 0, 0), \
+               'bodyStart': (238, 238, 236), \
+               'bodyEnd': (175, 175, 175), \
+               'titleText': (0, 0, 0), 
+               'excerptText': (0, 0, 0) }
+    DIMMED_ALPHA = 64 # out of 256
     TITLE_SIZE = 9
     MAX_TITLE_SIZE = 18
     MAX_EXCERPT_SIZE = 10
@@ -329,4 +321,4 @@ class PassageWidgetContext (wx.Menu):
         
         delete = wx.MenuItem(self, wx.NewId(), 'Delete ' + title)
         self.AppendItem(delete)
-        self.Bind(wx.EVT_MENU, self.parent.delete, id = delete.GetId())
+        self.Bind(wx.EVT_MENU, lambda e: self.parent.parent.removeWidget(self.parent), id = delete.GetId())

@@ -59,9 +59,9 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, self.resize)
-        self.Bind(wx.EVT_LEFT_DOWN, self.startMarquee)
-        self.Bind(wx.EVT_LEFT_UP, lambda i: self.eachWidget(lambda j: j.setSelected(False)))
-        self.Bind(wx.EVT_RIGHT_UP, lambda e: self.PopupMenu(StoryPanelContext(self, e.GetPosition()), e.GetPosition()))
+        self.Bind(wx.EVT_LEFT_DOWN, self.handleClick)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.handleDoubleClick)
+        self.Bind(wx.EVT_RIGHT_UP, self.handleRightClick)
         self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newWidget(pos = e.GetPosition()))
 
     def newWidget (self, title = None, text = '', pos = None, quietly = False):
@@ -80,6 +80,7 @@ class StoryPanel (wx.ScrolledWindow):
         if (not title): title = self.untitledName()
         
         self.widgets.append(PassageWidget(self, self.app, title = title, text = text, pos = pos))
+        self.Refresh()
         self.resize()
         if not quietly: self.parent.setDirty(True, action = 'New Passage')
 
@@ -104,7 +105,7 @@ class StoryPanel (wx.ScrolledWindow):
                     pos[coord] -= distance
                 pos[coord] += StoryPanel.INSET[coord]
                 
-            widget.moveTo(pos)
+            widget.pos = pos
             self.Refresh()
             
     def cleanup (self):
@@ -203,6 +204,37 @@ class StoryPanel (wx.ScrolledWindow):
         """Returns the name of the action that the user will be redoing."""
         return self.undoStack[self.undoPointer + 2]['action']
     
+    def handleClick (self, event):
+        """
+        Passes off execution to either startMarquee or startDrag,
+        depending on whether the user clicked a widget.
+        """
+        logicalClick = self.toLogical(event.GetPosition())
+        
+        for widget in self.widgets:
+            if widget.getLogicalRect().Contains(logicalClick):
+                if not self.hasSelection(): widget.setSelected(True)
+                self.startDrag(event, widget)
+                return
+        
+        self.startMarquee(event)
+        
+    def handleDoubleClick (self, event):
+        """Dispatches an openEditor() call to a widget the user clicked."""
+        logicalClick = self.toLogical(event.GetPosition())
+        for widget in self.widgets:
+            if widget.getLogicalRect().Contains(logicalClick): widget.openEditor()
+            
+    def handleRightClick (self, event):
+        """Either opens our own contextual menu, or passes it off to a widget."""
+        logicalClick = self.toLogical(event.GetPosition())
+        for widget in self.widgets:
+            if widget.getLogicalRect().Contains(logicalClick):
+                widget.openContextMenu(event)
+                return
+        
+        self.PopupMenu(StoryPanelContext(self, event.GetPosition()), event.GetPosition())
+    
     def startMarquee (self, event):
         """Starts a marquee selection."""
         if not self.draggingMarquee:
@@ -213,8 +245,7 @@ class StoryPanel (wx.ScrolledWindow):
             
             # deselect everything
             
-            for widget in self.widgets:
-                widget.setSelected(False, False)
+            map(lambda w: w.setSelected(False, False), self.widgets)
             
             # grab mouse focus
             
@@ -258,9 +289,9 @@ class StoryPanel (wx.ScrolledWindow):
             self.draggingWidgets = True
             self.clickedWidget = clickedWidget
             self.actuallyDragged = False
-            self.dragCurrent = clickedWidget.ClientToScreen(event.GetPosition())
-            self.dragCurrent = self.ScreenToClient(self.dragCurrent)
-                        
+            self.dragCurrent = event.GetPosition()
+            self.oldDirtyRect = clickedWidget.getPixelRect()
+            
             # have selected widgets remember their original position
             # in case they need to snap back to it after a bad drag
             
@@ -297,6 +328,8 @@ class StoryPanel (wx.ScrolledWindow):
                 if widget.selected and widget.intersectsAny():
                     goodDrag = False
                     break
+
+            self.eachSelectedWidget(lambda w: w.setDimmed(not goodDrag))
                 
             if goodDrag:
                 self.SetCursor(self.dragCursor)
@@ -305,11 +338,12 @@ class StoryPanel (wx.ScrolledWindow):
             
             # figure out our dirty rect
             
-            dirtyRect = wx.Rect(0, 0, 0, 0)
+            dirtyRect = self.oldDirtyRect
             
             for widget in self.widgets:
                 if widget.selected: dirtyRect = dirtyRect.Union(widget.dirtyPixelRect())
-            
+            self.oldDirtyRect = dirtyRect
+                            
             self.Refresh(True, dirtyRect)
         else:
             self.draggingWidgets = False
@@ -339,7 +373,6 @@ class StoryPanel (wx.ScrolledWindow):
             self.Bind(wx.EVT_MOUSE_EVENTS, None)
             self.ReleaseMouse()        
             self.SetCursor(self.defaultCursor)
-            #self.Refresh()
         
     def untitledName (self):
         """Returns a string for an untitled PassageWidget."""
@@ -449,26 +482,25 @@ class StoryPanel (wx.ScrolledWindow):
         origin[0] += scaleDelta * origin[0]
         origin[1] += scaleDelta * origin[1]
         
-        for i in self.widgets: i.resize()
         self.resize()
         self.Refresh()
         self.Scroll(origin[0], origin[1])
         self.parent.updateUI()
 
     def paint (self, event):
-        """Paints marquee selection and widget connectors onscreen."""
+        """Paints marquee selection, widget connectors, and widgets onscreen."""
         
         # do NOT call self.DoPrepareDC() no matter what the docs may say
         # we already take into account our scroll origin in our
         # toPixels() method
         
-        gc = wx.GraphicsContext.Create(wx.PaintDC(self))
+        gc = wx.GraphicsContext.Create(wx.BufferedPaintDC(self))
         
         # background
         
-        size = self.GetSize()
+        updateRect = self.GetUpdateRegion().GetBox()
         gc.SetBrush(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
-        gc.DrawRectangle(0, 0, size.width, size.height)
+        gc.DrawRectangle(updateRect.x, updateRect.y, updateRect.width, updateRect.height)
                 
         # connectors
         
@@ -481,11 +513,20 @@ class StoryPanel (wx.ScrolledWindow):
                     end = self.toPixels(otherWidget.getCenter())
                     gc.StrokeLine(start[0], start[1], end[0], end[1])
         
+        # widgets
+        
+        for widget in self.widgets:
+            if updateRect.Intersects(widget.getPixelRect()): widget.paint(gc)
+        
         # marquee selection
+        # use alpha blending for interior
         
         if self.draggingMarquee:
-            gc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)))
-            gc.SetBrush(wx.Brush(StoryPanel.MARQUEE_COLOR, style = wx.TRANSPARENT))
+            marqueeColor = wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)
+            gc.SetPen(wx.Pen(marqueeColor))
+            r, g, b = marqueeColor.Get()
+            marqueeColor = wx.Color(r, g, b, StoryPanel.MARQUEE_ALPHA)            
+            gc.SetBrush(wx.Brush(marqueeColor))
             gc.DrawRectangle(self.dragRect.x, self.dragRect.y, self.dragRect.width, self.dragRect.height)
             
     def resize (self, event = None):
@@ -517,10 +558,9 @@ class StoryPanel (wx.ScrolledWindow):
     FIRST_TITLE = 'Start'
     FIRST_TEXT = 'Your story will display this passage first. Edit it by double clicking it.'   
     BACKGROUND_COLOR = '#2e3436'
-    MARQUEE_COLOR = '#4e5456'
     CONNECTOR_COLOR = '#888a85'
-    SELECT_COLOR = '#ffffff'
-    SCROLL_SPEED = 10
+    MARQUEE_ALPHA = 32 # out of 256
+    SCROLL_SPEED = 25
     EXTRA_SPACE = 200
     GRID_SPACING = 140
     CLIPBOARD_FORMAT = 'TwinePassages'
