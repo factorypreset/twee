@@ -372,7 +372,7 @@ class StoryFrame (wx.Frame):
         
         dest.write(tw.toHtml(self.app, self.target))
         dest.close()        
-        if displayAfter: viewBuild()
+        if displayAfter: self.viewBuild()
     
     def viewBuild (self, event = None):
         """

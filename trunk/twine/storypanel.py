@@ -339,7 +339,7 @@ class StoryPanel (wx.ScrolledWindow):
             self.Bind(wx.EVT_MOUSE_EVENTS, None)
             self.ReleaseMouse()        
             self.SetCursor(self.defaultCursor)
-            self.Refresh()
+            #self.Refresh()
         
     def untitledName (self):
         """Returns a string for an untitled PassageWidget."""
