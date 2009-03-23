@@ -15,10 +15,24 @@ class App:
         """Initializes the application."""
         locale.setlocale(locale.LC_ALL, '')
         self.wxApp = wx.PySimpleApp()
+        self.stories = []
         self.loadPrefs()
+        
+        # recent files
+        # each of our StoryFrames shares the same menu
+        
         self.recentFiles = wx.FileHistory(App.RECENT_FILES)
         self.recentFiles.Load(self.config)
-        self.stories = []
+        self.recentFilesMenu = wx.Menu()
+        self.recentFiles.UseMenu(self.recentFilesMenu)
+        self.recentFiles.AddFilesToMenu()
+        
+        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(0), id = wx.ID_FILE1)
+        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(1), id = wx.ID_FILE2)
+        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(2), id = wx.ID_FILE3)
+        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(3), id = wx.ID_FILE4)
+        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(4), id = wx.ID_FILE5)
+        
         self.newStory()
         self.wxApp.MainLoop()
         
@@ -44,8 +58,7 @@ class App:
         """Opens a specific story file."""
         openedFile = open(path, 'r')
         self.stories.append(StoryFrame(None, app = self, state = pickle.load(openedFile)))
-        self.recentFiles.AddFileToHistory(path)
-        self.recentFiles.Save(self.config)
+        self.addRecentFile(path)
         openedFile.close()
         
     def exit (self, event = None):
@@ -63,7 +76,12 @@ class App:
                 # user closed the frame, so we need to recreate it
                 delattr(self, 'prefFrame')
                 self.showPrefs(event)           
-        
+    
+    def addRecentFile (self, path):
+        """Adds a path to the recent files history and updates the menus."""
+        self.recentFiles.AddFileToHistory(path)
+        self.recentFiles.Save(self.config)
+    
     def about (self, event = None):
         """Shows the about dialog."""
         info = wx.AboutDialogInfo()

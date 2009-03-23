@@ -91,6 +91,7 @@ class StoryPanel (wx.ScrolledWindow):
         """
         self.widgets.remove(widget)
         if not quietly: self.parent.setDirty(True, action = 'Delete')
+        self.Refresh()
         
     def snapWidget (self, widget):
         """Snaps a widget to our grid if self.snapping is set."""
@@ -166,6 +167,13 @@ class StoryPanel (wx.ScrolledWindow):
         Pushes the current state onto the undo stack. The name parameter describes
         the action that triggered this call, and is displayed in the Undo menu.
         """
+        
+        # delete anything above the undoPointer
+        
+        while self.undoPointer < len(self.undoStack) - 2: self.undoStack.pop()
+        
+        # add a new state onto the stack
+        
         state = { 'action': action, 'widgets': [] }
         for widget in self.widgets: state['widgets'].append(widget.serialize())
         self.undoStack.append(state)
@@ -176,7 +184,7 @@ class StoryPanel (wx.ScrolledWindow):
         Restores the undo state at self.undoPointer to the current view, then
         decreases self.undoPointer by 1.
         """
-        while len(self.widgets): self.widgets[0].delete(quietly = True)
+        self.widgets = []
         state = self.undoStack[self.undoPointer]
         for widget in state['widgets']:
             self.widgets.append(PassageWidget(self, self.app, state = widget))

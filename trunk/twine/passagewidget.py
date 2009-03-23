@@ -300,8 +300,10 @@ class PassageWidget:
     MIN_PIXEL_SIZE = 10
     SIZE = 120
     COLORS = { 'frame': (0, 0, 0), \
-               'bodyStart': (238, 238, 236), \
-               'bodyEnd': (175, 175, 175), \
+               #'bodyStart': (238, 238, 236), \
+               #'bodyEnd': (175, 175, 175), \
+               'bodyStart': (255, 255, 255), \
+               'bodyEnd': (228, 228, 226), \
                'titleBar': (52, 101, 164), \
                'titleText': (255, 255, 255), \
                'excerptText': (0, 0, 0) }

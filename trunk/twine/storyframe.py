@@ -49,15 +49,7 @@ class StoryFrame (wx.Frame):
         fileMenu.Append(wx.ID_OPEN, '&Open Story...\tCtrl-O')
         self.Bind(wx.EVT_MENU, self.app.openDialog, id = wx.ID_OPEN)
 
-        openRecent = wx.Menu()
-        fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', openRecent)
-        self.app.recentFiles.UseMenu(openRecent)
-        self.app.recentFiles.AddFilesToMenu()
-        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(0), id = wx.ID_FILE1)
-        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(1), id = wx.ID_FILE2)
-        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(2), id = wx.ID_FILE3)
-        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(3), id = wx.ID_FILE4)
-        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(4), id = wx.ID_FILE5)
+        fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', self.app.recentFilesMenu)
         
         fileMenu.AppendSeparator()
         
@@ -311,6 +303,7 @@ class StoryFrame (wx.Frame):
     
         if dialog.ShowModal() == wx.ID_OK:
             self.saveDestination = dialog.GetPath()
+            self.app.addRecentFile(self.saveDestination)
             self.save(None)
         
         dialog.Destroy()
@@ -318,7 +311,7 @@ class StoryFrame (wx.Frame):
     def exportSource (self, event = None):
         """Asks the user to choose a file to export source to, then exports the wiki."""
         dialog = wx.FileDialog(self, 'Export Source Code', os.getcwd(), "", \
-                         "Text File (*.txt)|*.txt", wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
+                               "Text File (*.txt)|*.txt", wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
         if dialog.ShowModal() == wx.ID_OK:
             path = dialog.GetPath()
             tw = TiddlyWiki()
