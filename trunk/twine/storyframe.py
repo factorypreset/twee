@@ -97,7 +97,7 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.pasteWidgets(), id = wx.ID_PASTE)
         
         editMenu.Append(wx.ID_DELETE, '&Delete\tDel')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: self.removeWidget(w)), id = wx.ID_DELETE)
 
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachWidget(lambda i: i.setSelected(True, exclusive = False)), id = wx.ID_SELECTALL)
@@ -151,7 +151,7 @@ class StoryFrame (wx.Frame):
                   id = StoryFrame.STORY_EDIT_FULLSCREEN)
         
         storyMenu.Append(wx.ID_DELETE, '&Delete Passage')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: w.delete()), id = wx.ID_DELETE)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachSelectedWidget(lambda w: self.storyPanel.removeWidget(w)), id = wx.ID_DELETE)
  
         storyMenu.AppendSeparator()
         

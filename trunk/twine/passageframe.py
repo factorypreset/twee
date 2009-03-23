@@ -125,7 +125,6 @@ class PassageFrame (wx.Frame):
             if tag != '': self.widget.passage.tags.append(tag)
         
         self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
-        self.widget.Refresh()
         self.widget.parent.Refresh()
         self.widget.parent.parent.setDirty(True)
     

@@ -89,9 +89,10 @@ class StoryPanel (wx.ScrolledWindow):
         Removes a widget from the container. This does not actually delete it from onscreen --
         see PassageWidget.delete() for that.
         """
-        self.widgets.remove(widget)
-        if not quietly: self.parent.setDirty(True, action = 'Delete')
-        self.Refresh()
+        if widget.checkDelete():
+            self.widgets.remove(widget)
+            if not quietly: self.parent.setDirty(True, action = 'Delete')
+            self.Refresh()
         
     def snapWidget (self, widget):
         """Snaps a widget to our grid if self.snapping is set."""
@@ -218,31 +219,25 @@ class StoryPanel (wx.ScrolledWindow):
         """
         Passes off execution to either startMarquee or startDrag,
         depending on whether the user clicked a widget.
-        """
-        logicalClick = self.toLogical(event.GetPosition())
-        
+        """        
         for widget in self.widgets:
-            if widget.getLogicalRect().Contains(logicalClick):
+            if widget.getPixelRect().Contains(event.GetPosition()):
                 if not widget.selected: widget.setSelected(True, not event.ShiftDown())
                 self.startDrag(event, widget)
                 return
-        
         self.startMarquee(event)
         
     def handleDoubleClick (self, event):
         """Dispatches an openEditor() call to a widget the user clicked."""
-        logicalClick = self.toLogical(event.GetPosition())
         for widget in self.widgets:
-            if widget.getLogicalRect().Contains(logicalClick): widget.openEditor()
+            if widget.getPixelRect().Contains(event.GetPosition()): widget.openEditor()
             
     def handleRightClick (self, event):
         """Either opens our own contextual menu, or passes it off to a widget."""
-        logicalClick = self.toLogical(event.GetPosition())
         for widget in self.widgets:
-            if widget.getLogicalRect().Contains(logicalClick):
+            if widget.getPixelRect().Contains(event.GetPosition()):
                 widget.openContextMenu(event)
                 return
-        
         self.PopupMenu(StoryPanelContext(self, event.GetPosition()), event.GetPosition())
     
     def startMarquee (self, event):
@@ -301,14 +296,13 @@ class StoryPanel (wx.ScrolledWindow):
             self.actuallyDragged = False
             self.dragCurrent = event.GetPosition()
             self.oldDirtyRect = clickedWidget.getPixelRect()
-            
-            # if 
-            
+                        
             # have selected widgets remember their original position
             # in case they need to snap back to it after a bad drag
             
             for widget in self.widgets:
-                if widget.selected: widget.predragPos = widget.pos
+                if widget.selected:
+                    widget.predragPos = widget.pos
             
             # grab mouse focus
             

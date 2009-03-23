@@ -24,7 +24,6 @@ class PassageWidget:
         
         self.parent = parent
         self.app = app
-        self.dragging = False
         self.dimmed = False
         pos = list(pos)
         
@@ -116,10 +115,28 @@ class PassageWidget:
                 self.openEditor(event, fullscreen)
                 
     def closeEditor (self, event = None):
+        """Closes the PassageFrame associated with this, if it exists."""
         try: self.passageFrame.closeFullscreen()
         except: pass
         try: self.passageFrame.Destroy()
         except: pass
+        
+    def checkDelete (self):
+        """Warns the user about deleting this passage if links exist to it."""
+        linked = False
+        for widget in self.parent.widgets:
+            if self.passage.title in widget.passage.links():
+                linked = True
+                break
+            
+        if linked:
+            message = 'Are you sure you want to delete "' + self.passage.title + '"?' + \
+                      ' Links to it from other passages will become broken.'
+            dialog = wx.MessageDialog(self.parent, message, 'Delete Passage', \
+                                      wx.ICON_WARNING | wx.YES_NO | wx.NO_DEFAULT)
+            return dialog.ShowModal() == wx.ID_YES
+                
+        return True
 
     def intersectsAny (self):
         """Returns whether this widget intersects any other in the same StoryPanel."""
@@ -236,7 +253,7 @@ class PassageWidget:
         # inset for text (we need to know this for layout purposes)
         
         inset = titleFontHeight / 3
-
+        
         # frame
         
         frameColor = dim(PassageWidget.COLORS['frame'], self.dimmed)
@@ -299,9 +316,8 @@ class PassageWidget:
     
     MIN_PIXEL_SIZE = 10
     SIZE = 120
+    SHADOW_SIZE = 5
     COLORS = { 'frame': (0, 0, 0), \
-               #'bodyStart': (238, 238, 236), \
-               #'bodyEnd': (175, 175, 175), \
                'bodyStart': (255, 255, 255), \
                'bodyEnd': (228, 228, 226), \
                'titleBar': (52, 101, 164), \
