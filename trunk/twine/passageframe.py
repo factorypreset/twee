@@ -25,18 +25,32 @@ class PassageFrame (wx.Frame):
         
         passageMenu = wx.Menu()
         
-        passageMenu.Append(wx.ID_CLOSE, '&Close\tCtrl-W')
-        self.Bind(wx.EVT_MENU, lambda e: self.Destroy(), id = wx.ID_CLOSE)        
-        
-        passageMenu.Append(PassageFrame.PASSAGE_FULLSCREEN, 'Edit &Fullscreen\tF12')
-        self.Bind(wx.EVT_MENU, self.openFullscreen, id = PassageFrame.PASSAGE_FULLSCREEN)
-        
+        self.outLinksMenu = wx.Menu()
+        self.outLinksMenuTitle = passageMenu.AppendMenu(wx.ID_ANY, 'Outgoing Links', self.outLinksMenu)
+        self.inLinksMenu = wx.Menu()
+        self.inLinksMenuTitle = passageMenu.AppendMenu(wx.ID_ANY, 'Incoming Links', self.inLinksMenu)
+        self.brokenLinksMenu = wx.Menu()
+        self.brokenLinksMenuTitle = passageMenu.AppendMenu(wx.ID_ANY, 'Broken Links', self.brokenLinksMenu)
+
+        passageMenu.Append(PassageFrame.PASSAGE_EDIT_SELECTION, '&Edit Selection\tCtrl-E')
+        self.Bind(wx.EVT_MENU, lambda e: self.openOtherEditor(title = self.getSelectionLink()), \
+                  id = PassageFrame.PASSAGE_EDIT_SELECTION)
+
         passageMenu.AppendSeparator()
+        
         passageMenu.Append(wx.ID_SAVE, '&Save Story\tCtrl-S')
         self.Bind(wx.EVT_MENU, self.widget.parent.parent.save, id = wx.ID_SAVE)
         
         passageMenu.Append(PassageFrame.PASSAGE_REBUILD_STORY, '&Rebuild Story\tCtrl-R')
         self.Bind(wx.EVT_MENU, self.widget.parent.parent.rebuild, id = PassageFrame.PASSAGE_REBUILD_STORY)
+
+        passageMenu.AppendSeparator()
+
+        passageMenu.Append(PassageFrame.PASSAGE_FULLSCREEN, '&Fullscreen View\tF12')
+        self.Bind(wx.EVT_MENU, self.openFullscreen, id = PassageFrame.PASSAGE_FULLSCREEN)
+
+        passageMenu.Append(wx.ID_CLOSE, '&Close Passage\tCtrl-W')
+        self.Bind(wx.EVT_MENU, lambda e: self.Destroy(), id = wx.ID_CLOSE)        
         
         # Edit menu
         
@@ -46,6 +60,7 @@ class PassageFrame (wx.Frame):
         editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
         editMenu.Append(wx.ID_COPY, '&Copy\tCtrl-C')
         editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
+        
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
 
         # menus
@@ -88,6 +103,7 @@ class PassageFrame (wx.Frame):
                      border = PassageFrame.SPACING)
         self.applyPrefs()
         self.syncInputs()
+        self.updateSubmenus()
         
         # event bindings
         # we need to do this AFTER setting up initial values
@@ -96,6 +112,7 @@ class PassageFrame (wx.Frame):
         self.tagsInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.bodyInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.Bind(wx.EVT_CLOSE, self.closeFullscreen)
+        self.Bind(wx.EVT_UPDATE_UI, self.updateUI)
         
         if not re.match('Untitled Passage \d+', self.widget.passage.title):
             self.bodyInput.SetFocus()
@@ -125,6 +142,7 @@ class PassageFrame (wx.Frame):
             if tag != '': self.widget.passage.tags.append(tag)
         
         self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
+        self.updateSubmenus()
         self.widget.parent.Refresh()
         self.widget.parent.parent.setDirty(True)
     
@@ -141,11 +159,121 @@ class PassageFrame (wx.Frame):
         try: self.fullscreen.Destroy()
         except: pass
         event.Skip()
+        
+    def openOtherEditor (self, event = None, title = None):
+        """
+        Opens another passage for editing. If it does not exist, then
+        it creates it next to this one and then opens it. You may pass
+        this a string title OR an event. If you pass an event, it presumes
+        it is a wx.CommandEvent, and uses the exact text of the menu as the title.
+        """
+
+        # this is a bit retarded
+        # we seem to be receiving CommandEvents, not MenuEvents,
+        # so we can only see menu item IDs
+        # unfortunately all our menu items are dynamically generated
+        # so we gotta work our way back to a menu name
+        
+        if not title: title = self.menus.FindItemById(event.GetId()).GetLabel()
+        found = False
+
+        # check if the passage already exists
+        
+        for widget in self.widget.parent.widgets:
+            if widget.passage.title == title:
+                found = True
+                editingWidget = widget
+                break
+        
+        if not found:
+            editingWidget = self.widget.parent.newWidget(title = title, pos = self.widget.pos)
+       
+        editingWidget.openEditor()
        
     def setBodyText (self, text):
         """Changes the body text field directly."""
         self.bodyInput.SetValue(text)
         self.Show(True)
+        
+    def getSelectionLink (self):
+        """Returns the body input's current selection, minus whitespace and other crud."""
+        return self.bodyInput.GetStringSelection().strip(""" "'<>[]""")
+        
+    def updateUI (self, event):
+        """Updates menus."""
+        
+        # edit selection
+        
+        editSelected = self.menus.FindItemById(PassageFrame.PASSAGE_EDIT_SELECTION)
+        selection = self.getSelectionLink()
+        
+        if selection != '':
+            if len(selection) < 25:
+                editSelected.SetItemLabel('Edit "' + selection + '"\tCtrl-E')
+            else:
+                editSelected.SetItemLabel('Edit Selection\tCtrl-E')
+            editSelected.Enable(True)
+        else:
+            editSelected.SetItemLabel('Edit Selection\tCtrl-E')
+            editSelected.Enable(False)
+
+    def updateSubmenus (self):
+        """
+        Updates our passage menus. This should be called sparingly, i.e. not during
+        a UI update event, as it is doing a bunch of removing and adding of items.
+        """
+                
+        # separate outgoing and broken links
+        
+        outgoing = []
+        incoming = []
+        broken = []
+        
+        for link in self.widget.passage.links():
+            found = False
+            
+            for widget in self.widget.parent.widgets:
+                if widget.passage.title == link:
+                    outgoing.append(link)
+                    found = True
+                    break
+                
+            if not found: broken.append(link)
+
+        # incoming links
+
+        for widget in self.widget.parent.widgets:
+            if self.widget.passage.title in widget.passage.links():
+                incoming.append(widget.passage.title)
+                
+        # repopulate the menus
+
+        def populate (menu, links):
+            for item in menu.GetMenuItems():
+                menu.DeleteItem(item)
+            
+            if len(links):   
+                for link in links:
+                    item = menu.Append(wx.ID_ANY, link)
+                    self.Bind(wx.EVT_MENU, self.openOtherEditor, item)
+            else:
+                item = menu.Append(wx.ID_ANY, '(None)')
+                item.Enable(False)
+
+        outTitle = 'Outgoing Links'
+        if len(outgoing) > 0: outTitle += ' (' + str(len(outgoing)) + ')'
+        self.outLinksMenuTitle.SetText(outTitle)
+        populate(self.outLinksMenu, outgoing)
+
+        inTitle = 'Incoming Links'
+        if len(incoming) > 0: inTitle += ' (' + str(len(incoming)) + ')'
+        self.inLinksMenuTitle.SetText(inTitle)
+        populate(self.inLinksMenu, incoming)
+        
+        brokenTitle = 'Broken Links'
+        if len(broken) > 0: brokenTitle += ' (' + str(len(broken)) + ')'
+        self.brokenLinksMenuTitle.SetText(brokenTitle)
+        populate(self.brokenLinksMenu, broken)
         
     def applyPrefs (self):
         """Applies user prefs to this frame."""
@@ -162,5 +290,6 @@ class PassageFrame (wx.Frame):
         
     # menu constants (not defined by wx)
     
-    PASSAGE_FULLSCREEN = 1002
-    PASSAGE_REBUILD_STORY = 1005
+    PASSAGE_FULLSCREEN = 1001
+    PASSAGE_EDIT_SELECTION = 1002
+    PASSAGE_REBUILD_STORY = 1003

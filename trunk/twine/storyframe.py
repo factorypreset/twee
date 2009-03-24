@@ -50,6 +50,11 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, self.app.openDialog, id = wx.ID_OPEN)
 
         fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', self.app.recentFilesMenu)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(0), id = wx.ID_FILE1)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(1), id = wx.ID_FILE2)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(2), id = wx.ID_FILE3)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(3), id = wx.ID_FILE4)
+        self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(4), id = wx.ID_FILE5)
         
         fileMenu.AppendSeparator()
         
@@ -161,7 +166,7 @@ class StoryFrame (wx.Frame):
         storyMenu.Append(StoryFrame.STORY_REBUILD, '&Rebuild Story\tCtrl-R')
         self.Bind(wx.EVT_MENU, self.rebuild, id = StoryFrame.STORY_REBUILD) 
 
-        storyMenu.Append(StoryFrame.STORY_VIEW_LAST, '&View Last Build')
+        storyMenu.Append(StoryFrame.STORY_VIEW_LAST, '&View Last Build\tCtrl-L')
         self.Bind(wx.EVT_MENU, self.viewBuild, id = StoryFrame.STORY_VIEW_LAST)
 
         storyMenu.AppendSeparator()
@@ -229,7 +234,7 @@ class StoryFrame (wx.Frame):
 
         iconPath = self.app.getPath() + os.sep + 'icons' + os.sep
         
-        self.toolbar = self.CreateToolBar()
+        self.toolbar = self.CreateToolBar(style = wx.TB_FLAT | wx.TB_NODIVIDER)
         self.toolbar.SetToolBitmapSize((StoryFrame.TOOLBAR_ICON_SIZE, StoryFrame.TOOLBAR_ICON_SIZE))
         
         self.toolbar.AddLabelTool(StoryFrame.STORY_NEW_PASSAGE, 'New Passage', \
@@ -363,7 +368,7 @@ class StoryFrame (wx.Frame):
         for widget in self.storyPanel.widgets:
             tw.addTiddler(widget.passage)
         
-        dest.write(tw.toHtml(self.app, self.target))
+        dest.write(tw.toHtml(self.app, self.target).encode('utf-8'))
         dest.close()        
         if displayAfter: self.viewBuild()
     

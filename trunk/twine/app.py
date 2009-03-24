@@ -26,13 +26,7 @@ class App:
         self.recentFilesMenu = wx.Menu()
         self.recentFiles.UseMenu(self.recentFilesMenu)
         self.recentFiles.AddFilesToMenu()
-        
-        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(0), id = wx.ID_FILE1)
-        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(1), id = wx.ID_FILE2)
-        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(2), id = wx.ID_FILE3)
-        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(3), id = wx.ID_FILE4)
-        self.recentFilesMenu.Bind(wx.EVT_MENU, lambda e: self.openRecent(4), id = wx.ID_FILE5)
-        
+                
         self.newStory()
         self.wxApp.MainLoop()
         

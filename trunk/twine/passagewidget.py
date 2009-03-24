@@ -265,7 +265,7 @@ class PassageWidget:
                                                  pixPos[0], pixPos[1] + pixSize[1], \
                                                  frameInterior[0], frameInterior[1]))     
         gc.DrawRectangle(pixPos[0], pixPos[1], pixSize[0] - 1, pixSize[1] - 1)
-        
+                
         # title bar
         
         titleBarHeight = titleFontHeight + (2 * inset)
@@ -273,32 +273,33 @@ class PassageWidget:
         gc.SetPen(wx.Pen(titleBarColor, 1))
         gc.SetBrush(wx.Brush(titleBarColor))
         gc.DrawRectangle(pixPos[0] + 1, pixPos[1] + 1, pixSize[0] - 3, titleBarHeight)
-        
-        # draw title
-        # we let clipping prevent writing over the frame
-        
-        gc.ResetClip()
-        gc.Clip(pixPos[0] + inset, pixPos[1] + inset, pixSize[0] - (inset * 2), titleBarHeight - 2)
-        titleTextColor = dim(PassageWidget.COLORS['titleText'], self.dimmed)
-        gc.SetFont(titleFont, titleTextColor)
-        gc.DrawText(self.passage.title, pixPos[0] + inset, pixPos[1] + inset)
-        
-        # draw excerpt
 
-        excerptTop = pixPos[1] + inset + titleBarHeight
-
-        # we split the excerpt by line, then draw them in turn
-        # (we use a library to determine breaks, but have to draw the lines ourselves)
-
-        gc.ResetClip()
-        excerptTextColor = dim(PassageWidget.COLORS['excerptText'], self.dimmed)
-        gc.SetFont(excerptFont, excerptTextColor)
-        excerptLines = wordWrap(self.passage.text, pixSize[0] - (inset * 2), gc)
-        
-        for line in excerptLines:
-            gc.DrawText(line, pixPos[0] + inset, excerptTop)
-            excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
-            if excerptTop > (pixPos[1] + pixSize[1]) - inset: break
+        if pixSize[0] > PassageWidget.MIN_GREEKING_SIZE:        
+            # draw title
+            # we let clipping prevent writing over the frame
+            
+            gc.ResetClip()
+            gc.Clip(pixPos[0] + inset, pixPos[1] + inset, pixSize[0] - (inset * 2), titleBarHeight - 2)
+            titleTextColor = dim(PassageWidget.COLORS['titleText'], self.dimmed)
+            gc.SetFont(titleFont, titleTextColor)
+            gc.DrawText(self.passage.title, pixPos[0] + inset, pixPos[1] + inset)
+            
+            # draw excerpt
+    
+            excerptTop = pixPos[1] + inset + titleBarHeight
+    
+            # we split the excerpt by line, then draw them in turn
+            # (we use a library to determine breaks, but have to draw the lines ourselves)
+    
+            gc.ResetClip()
+            excerptTextColor = dim(PassageWidget.COLORS['excerptText'], self.dimmed)
+            gc.SetFont(excerptFont, excerptTextColor)
+            excerptLines = wordWrap(self.passage.text, pixSize[0] - (inset * 2), gc)
+            
+            for line in excerptLines:
+                gc.DrawText(line, pixPos[0] + inset, excerptTop)
+                excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
+                if excerptTop > (pixPos[1] + pixSize[1]) - inset: break
             
         # finally, draw a selection over ourselves if we're selected
         
@@ -315,6 +316,7 @@ class PassageWidget:
         return { 'selected': self.selected, 'pos': self.pos, 'passage': self.passage }
     
     MIN_PIXEL_SIZE = 10
+    MIN_GREEKING_SIZE = 50
     SIZE = 120
     SHADOW_SIZE = 5
     COLORS = { 'frame': (0, 0, 0), \

@@ -32,6 +32,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.widgets = []
         self.draggingMarquee = False
         self.draggingWidgets = False
+        self.scrolling = False
         self.undoStack = []
         self.undoPointer = -1
         
@@ -51,6 +52,7 @@ class StoryPanel (wx.ScrolledWindow):
         
         self.dragCursor = wx.StockCursor(wx.CURSOR_SIZING)
         self.badDragCursor = wx.StockCursor(wx.CURSOR_NO_ENTRY)
+        self.scrollCursor = wx.StockCursor(wx.CURSOR_SIZING)
         self.defaultCursor = wx.StockCursor(wx.CURSOR_ARROW)
         self.SetCursor(self.defaultCursor)
 
@@ -62,6 +64,8 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_LEFT_DOWN, self.handleClick)
         self.Bind(wx.EVT_LEFT_DCLICK, self.handleDoubleClick)
         self.Bind(wx.EVT_RIGHT_UP, self.handleRightClick)
+        self.Bind(wx.EVT_KEY_DOWN, self.handleKeyDown)
+        self.Bind(wx.EVT_KEY_UP, self.handleKeyUp)
         self.Bind(wx.EVT_MIDDLE_UP, lambda e: self.newWidget(pos = e.GetPosition()))
 
     def newWidget (self, title = None, text = '', pos = None, quietly = False):
@@ -79,10 +83,12 @@ class StoryPanel (wx.ScrolledWindow):
         
         if (not title): title = self.untitledName()
         
-        self.widgets.append(PassageWidget(self, self.app, title = title, text = text, pos = pos))
+        new = PassageWidget(self, self.app, title = title, text = text, pos = pos)
+        self.widgets.append(new)
         self.Refresh()
         self.resize()
         if not quietly: self.parent.setDirty(True, action = 'New Passage')
+        return new
 
     def removeWidget (self, widget, quietly = False):
         """
@@ -219,7 +225,17 @@ class StoryPanel (wx.ScrolledWindow):
         """
         Passes off execution to either startMarquee or startDrag,
         depending on whether the user clicked a widget.
-        """        
+        """
+        
+        # if the space bar is down, any click translates to a scroll
+        
+        if self.scrolling:
+            self.startScroll(event)
+            return
+        
+        # otherwise, start a drag if the user clicked a widget
+        # or a marquee if they didn't
+                
         for widget in self.widgets:
             if widget.getPixelRect().Contains(event.GetPosition()):
                 if not widget.selected: widget.setSelected(True, not event.ShiftDown())
@@ -239,6 +255,42 @@ class StoryPanel (wx.ScrolledWindow):
                 widget.openContextMenu(event)
                 return
         self.PopupMenu(StoryPanelContext(self, event.GetPosition()), event.GetPosition())
+    
+    def handleKeyDown (self, event):
+        """Switches the cursor to a hand if the space bar is pressed."""
+        if event.GetKeyCode() == wx.WXK_SPACE:
+            self.SetCursor(self.scrollCursor)
+            self.scrolling = True
+        event.Skip()
+        
+    def handleKeyUp (self, event):
+        if event.GetKeyCode() == wx.WXK_SPACE:
+            self.SetCursor(self.defaultCursor)
+            self.scrolling = False
+        event.Skip()
+    
+    def startScroll (self, event):
+        """Starts a scroll action."""
+        self.lastScroll = event.GetPosition()
+        self.Bind(wx.EVT_MOUSE_EVENTS, self.followScroll)
+        self.CaptureMouse()
+        
+    def followScroll (self, event):
+        """
+        Follows the mouse during a scroll. If the user lets go of the space
+        bar, it occurs in a separate event, handled by handleKeyUp.
+        """
+        if event.LeftIsDown():
+            scrollPos = event.GetPosition()
+            scale = self.GetScrollPixelsPerUnit()
+            deltaX = ((scrollPos.x - self.lastScroll.x) / scale[0]) * StoryPanel.SCROLL_DRAG
+            deltaY = ((scrollPos.y - self.lastScroll.y) / scale[1]) * StoryPanel.SCROLL_DRAG
+            currentOrigin = self.GetViewStart()
+            self.Scroll(max(currentOrigin[0] - deltaX, 0), max(currentOrigin[1] - deltaY, 0))
+        else:
+            self.scrolling = False
+            self.Bind(wx.EVT_MOUSE_EVENTS, None)
+            self.ReleaseMouse()
     
     def startMarquee (self, event):
         """Starts a marquee selection."""
