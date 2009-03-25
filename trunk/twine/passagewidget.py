@@ -235,21 +235,21 @@ class PassageWidget:
                 c.append(255)
             if dim: c[3] *= PassageWidget.DIMMED_ALPHA
             return wx.Color(c[0], c[1], c[2], c[3])
-                
+        
         pixPos = self.parent.toPixels(self.pos)
         pixSize = self.parent.toPixels(self.getSize(), scaleOnly = True)
 
         # text font sizes
         # wxWindows works with points, so we need to doublecheck on actual pixels
 
-        titleFontSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1))[0]
+        titleFontSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1), scaleOnly = True)[0]
         titleFontSize = min(titleFontSize, PassageWidget.MAX_TITLE_SIZE)
         excerptFontSize = min(titleFontSize * 0.9, PassageWidget.MAX_EXCERPT_SIZE)
         titleFont = wx.Font(titleFontSize, wx.SWISS, wx.NORMAL, wx.BOLD, False, 'Arial')
         excerptFont = wx.Font(excerptFontSize, wx.SWISS, wx.NORMAL, wx.NORMAL, False, 'Arial')
         titleFontHeight = math.fabs(titleFont.GetPixelSize()[1])
         excerptFontHeight = math.fabs(excerptFont.GetPixelSize()[1])
-        
+                
         # inset for text (we need to know this for layout purposes)
         
         inset = titleFontHeight / 3

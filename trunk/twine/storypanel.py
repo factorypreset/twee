@@ -283,8 +283,8 @@ class StoryPanel (wx.ScrolledWindow):
         if event.LeftIsDown():
             scrollPos = event.GetPosition()
             scale = self.GetScrollPixelsPerUnit()
-            deltaX = ((scrollPos.x - self.lastScroll.x) / scale[0]) * StoryPanel.SCROLL_DRAG
-            deltaY = ((scrollPos.y - self.lastScroll.y) / scale[1]) * StoryPanel.SCROLL_DRAG
+            deltaX = (scrollPos.x - self.lastScroll.x) / scale[0]
+            deltaY = (scrollPos.y - self.lastScroll.y) / scale[1]
             currentOrigin = self.GetViewStart()
             self.Scroll(max(currentOrigin[0] - deltaX, 0), max(currentOrigin[1] - deltaY, 0))
         else:
