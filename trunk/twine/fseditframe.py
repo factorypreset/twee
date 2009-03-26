@@ -19,6 +19,17 @@ class FullscreenEditFrame (wx.Frame):
         self.callback = callback
         self.frame = frame
         
+        # menu bar
+        # this is never seen by the user,
+        # but lets them hit ctrl-S to save
+        
+        menuBar = wx.MenuBar()
+        menu = wx.Menu()
+        menu.Append(wx.ID_SAVE, '&Save Story\tCtrl-S')
+        self.Bind(wx.EVT_MENU, lambda e: self.frame.widget.parent.parent.save, id = wx.ID_SAVE)
+        menuBar.Append(menu, 'Commands')
+        self.SetMenuBar(menuBar)
+        
         # margins
         
         self.marginPanel = wx.Panel(self)
