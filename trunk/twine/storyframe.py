@@ -318,15 +318,16 @@ class StoryFrame (wx.Frame):
         dialog = wx.FileDialog(self, 'Export Source Code', os.getcwd(), "", \
                                "Text File (*.txt)|*.txt", wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
         if dialog.ShowModal() == wx.ID_OK:
-            path = dialog.GetPath()
-            tw = TiddlyWiki()
-            
-            for widget in self.storyPanel.widgets:
-                tw.addTiddler(widget.passage)
-
-            dest = open(path, 'w')            
-            dest.write(tw.toTwee())
-            dest.close()
+            try:
+                path = dialog.GetPath()
+                tw = TiddlyWiki()
+                
+                for widget in self.storyPanel.widgets: tw.addTiddler(widget.passage)
+                dest = open(path, 'w')            
+                dest.write(tw.toTwee())
+                dest.close()
+            except:
+                self.app.displayError('exporting your source code')
 
         dialog.Destroy()
 
@@ -335,10 +336,13 @@ class StoryFrame (wx.Frame):
             self.saveAs()
             return
         
-        dest = open(self.saveDestination, 'w')
-        pickle.dump(self.serialize(), dest)
-        dest.close()
-        self.setDirty(False)
+        try:
+            dest = open(self.saveDestination, 'w')
+            pickle.dump(self.serialize(), dest)
+            dest.close()
+            self.setDirty(False)
+        except:
+            self.app.displayError('saving your story')
 
     def build (self, event = None):
         """Asks the user to choose a location to save a compiled story, then passed control to rebuild()."""
@@ -357,20 +361,23 @@ class StoryFrame (wx.Frame):
         Builds an HTML version of the story. Pass whether to open the destination file afterwards.
         """
 
-        # open destination for writing
-        
-        dest = open(self.buildDestination, 'w')
-
-        # assemble our tiddlywiki and write it out
-        
-        tw = TiddlyWiki()
-        
-        for widget in self.storyPanel.widgets:
-            tw.addTiddler(widget.passage)
-        
-        dest.write(tw.toHtml(self.app, self.target).encode('utf-8'))
-        dest.close()        
-        if displayAfter: self.viewBuild()
+        try:
+            # open destination for writing
+            
+            dest = open(self.buildDestination, 'w')
+    
+            # assemble our tiddlywiki and write it out
+            
+            tw = TiddlyWiki()
+            
+            for widget in self.storyPanel.widgets:
+                tw.addTiddler(widget.passage)
+            
+            dest.write(tw.toHtml(self.app, self.target).encode('utf-8'))
+            dest.close()        
+            if displayAfter: self.viewBuild()
+        except:
+            self.app.displayError('building your story')
     
     def viewBuild (self, event = None):
         """
@@ -422,17 +429,20 @@ class StoryFrame (wx.Frame):
             dialog.Destroy()
             return
         
-        # open destination for writing
+        try:
+            # open destination for writing
         
-        dest = open(path, 'w')
-        
-        # assemble our tiddlywiki and write it out
-        
-        tw = TiddlyWiki()
-        
-        self.storyPanel.eachWidget(lambda w: tw.addTiddler(w.passage))
-        dest.write(tw.toRtf())
-        dest.close()
+            dest = open(path, 'w')
+            
+            # assemble our tiddlywiki and write it out
+            
+            tw = TiddlyWiki()
+            
+            self.storyPanel.eachWidget(lambda w: tw.addTiddler(w.passage))
+            dest.write(tw.toRtf())
+            dest.close()
+        except:
+            self.app.displayError('building a proofing copy of your story')
         
     def setTarget (self, target):
         self.target = target

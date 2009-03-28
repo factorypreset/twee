@@ -50,10 +50,13 @@ class App:
     
     def open (self, path):
         """Opens a specific story file."""
-        openedFile = open(path, 'r')
-        self.stories.append(StoryFrame(None, app = self, state = pickle.load(openedFile)))
-        self.addRecentFile(path)
-        openedFile.close()
+        try:
+            openedFile = open(path, 'r')
+            self.stories.append(StoryFrame(None, app = self, state = pickle.load(openedFile)))
+            self.addRecentFile(path)
+            openedFile.close()
+        except:
+            self.displayError('opening your story')
         
     def exit (self, event = None):
         """Closes all open stories, implicitly quitting."""
@@ -123,6 +126,18 @@ class App:
     def applyPrefs (self):
         """Asks all of our stories to update themselves based on a preference change."""
         map(lambda s: s.applyPrefs(), self.stories)
+
+    def displayError (self, activity):
+        """
+        Displays an error dialog with diagnostic info. Call with what you were doing
+        when the error occurred (e.g. 'saving your story', 'building your story'.)
+        """
+        exception = sys.exc_info()
+        text = 'An error occurred while ' + activity + ' ('
+        text += str(exception[1]) + ').'
+        
+        error = wx.MessageDialog(self, text, 'Error', wx.OK | wx.ICON_ERROR)
+        error.ShowModal()
 
     def getPath (self):
         """Returns the path to the executing script or application."""
