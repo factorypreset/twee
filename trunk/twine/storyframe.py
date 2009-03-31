@@ -609,7 +609,7 @@ class StoryFrame (wx.Frame):
     # size constants
     
     DEFAULT_SIZE = (800, 600)
-    TOOLBAR_ICON_SIZE = 22
+    TOOLBAR_ICON_SIZE = 32
     
     # misc stuff
     

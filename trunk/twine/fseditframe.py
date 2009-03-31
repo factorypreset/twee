@@ -53,7 +53,7 @@ class FullscreenEditFrame (wx.Frame):
         self.editCtrl.SetUseHorizontalScrollBar(False)
         self.editCtrl.SetUseVerticalScrollBar(False)
         
-        self.directions = wx.StaticText(self.panel, label = FullscreenEditFrame.DIRECTIONS)
+        self.directions = wx.StaticText(self.panel, label = FullscreenEditFrame.DIRECTIONS, style = wx.ALIGN_CENTRE)
         labelFont = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         labelFont.SetPointSize(FullscreenEditFrame.LABEL_FONT_SIZE)
         self.directions.SetFont(labelFont)
@@ -101,6 +101,9 @@ class FullscreenEditFrame (wx.Frame):
         self.editCtrl.StyleSetBackground(defaultStyle, bgColor)      
         self.editCtrl.StyleSetFont(defaultStyle, editFont)
 
+        editFont.SetPointSize(editFont.GetPointSize() * FullscreenEditFrame.LINE_SPACING)
+        self.editCtrl.StyleSetFont(wx.stc.STC_STYLE_BRACELIGHT, editFont)
+
         self.directions.SetForegroundColour(textColor)
 
     def keyListener (self, event):
@@ -119,4 +122,5 @@ class FullscreenEditFrame (wx.Frame):
         event.Skip()
         
     DIRECTIONS = 'Press Escape to close this passage, F12 to leave fullscreen.'
-    LABEL_FONT_SIZE = 12
+    LABEL_FONT_SIZE = 10
+    LINE_SPACING = 1.4

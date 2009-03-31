@@ -245,6 +245,7 @@ class PassageWidget:
         titleFontSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1), scaleOnly = True)[0]
         titleFontSize = min(titleFontSize, PassageWidget.MAX_TITLE_SIZE)
         excerptFontSize = min(titleFontSize * 0.9, PassageWidget.MAX_EXCERPT_SIZE)
+        excerptFontSize = max(excerptFontSize, PassageWidget.MIN_EXCERPT_SIZE)
         titleFont = wx.Font(titleFontSize, wx.SWISS, wx.NORMAL, wx.BOLD, False, 'Arial')
         excerptFont = wx.Font(excerptFontSize, wx.SWISS, wx.NORMAL, wx.NORMAL, False, 'Arial')
         titleFontHeight = math.fabs(titleFont.GetPixelSize()[1])
@@ -328,7 +329,8 @@ class PassageWidget:
     DIMMED_ALPHA = 0.25
     TITLE_SIZE = 9
     MAX_TITLE_SIZE = 18
-    MAX_EXCERPT_SIZE = 10
+    MIN_EXCERPT_SIZE = 9
+    MAX_EXCERPT_SIZE = 12
     LINE_SPACING = 1.2
     
 # contextual menu
