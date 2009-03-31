@@ -209,12 +209,12 @@ class PassageFrame (wx.Frame):
         
         if selection != '':
             if len(selection) < 25:
-                editSelected.SetItemLabel('Edit "' + selection + '"\tCtrl-E')
+                editSelected.SetText('Edit "' + selection + '"\tCtrl-E')
             else:
-                editSelected.SetItemLabel('Edit Selection\tCtrl-E')
+                editSelected.SetText('Edit Selection\tCtrl-E')
             editSelected.Enable(True)
         else:
-            editSelected.SetItemLabel('Edit Selection\tCtrl-E')
+            editSelected.SetText('Edit Selection\tCtrl-E')
             editSelected.Enable(False)
 
     def updateSubmenus (self):
