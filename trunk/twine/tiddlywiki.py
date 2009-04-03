@@ -154,6 +154,9 @@ class Tiddler:
 		else:
 			self.initHtml(source)
 
+	def __unicode__ (self):
+		return self.title
+
 	def __cmp__ (self, other):
 		"""Compares a Tiddler to another."""
 		return self.text == other.text
@@ -280,8 +283,29 @@ class Tiddler:
 
 	def links (self):
 		"""Returns a list of all passages linked to by this one."""
-		return re.findall(r'\[\[(.*?)\]\]', self.text)
+
+		# regular hyperlinks
+		
+		links = re.findall(r'\[\[(.*?)\]\]', self.text)
 	
+		# check for [[title|target]] formats
+
+		def filterPrettyLinks (text):
+			if '|' in text: return re.sub('.*\|', '', text)
+			else: return text
+		
+		links = map(filterPrettyLinks, links)
+
+		# <<display ''>>
+		
+		displays = re.findall(r'\<\<display\s+[\'"](.*?)[\'"]\s?\>\>', self.text, re.IGNORECASE)
+		
+		# <<choice ''>>
+		
+		choices = re.findall(r'\<\<choice\s+[\'"](.*?)[\'"]\s?\>\>', self.text, re.IGNORECASE)
+		
+		return links + displays + choices
+
 #
 # Helper functions
 #
