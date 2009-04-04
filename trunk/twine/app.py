@@ -26,7 +26,11 @@ class App:
         self.recentFilesMenu = wx.Menu()
         self.recentFiles.UseMenu(self.recentFilesMenu)
         self.recentFiles.AddFilesToMenu()
-                
+        
+        # change working directory to the user's home directory
+        
+        os.chdir(os.path.expanduser('~'))    
+           
         self.newStory()
         self.wxApp.MainLoop()
         
