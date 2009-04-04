@@ -14,7 +14,7 @@
 # logical coordinates. Use StoryPanel.toPixels() to convert.
 #
 
-import math, wx, wx.lib.wordwrap, storypanel, tiddlywiki
+import os, math, wx, wx.lib.wordwrap, storypanel, tiddlywiki
 from passageframe import PassageFrame
 
 class PassageWidget:
@@ -25,6 +25,7 @@ class PassageWidget:
         self.parent = parent
         self.app = app
         self.dimmed = False
+        self.brokenEmblem = wx.Bitmap(self.app.getPath() + os.sep + 'icons' + os.sep + 'brokenemblem.png')
         pos = list(pos)
         
         if state:
@@ -66,7 +67,7 @@ class PassageWidget:
         self.pos[0] += x
         self.pos[1] += y
  
-    def findSpace(self):
+    def findSpace (self):
         """Moves this widget so it doesn't overlap any others."""        
         originalX = self.pos[0]
         
@@ -79,6 +80,12 @@ class PassageWidget:
                 self.pos[0] = originalX
                 self.pos[1] += self.parent.GRID_SPACING
         
+    def getBrokenLinks (self):
+        """Returns a list of broken links in this widget."""
+        brokens = []
+        for link in self.passage.links():
+            if not self.parent.findWidget(link): brokens.append(link)
+        return brokens
                  
     def setSelected (self, value, exclusive = True):
         """
@@ -128,7 +135,7 @@ class PassageWidget:
             if self.passage.title in widget.passage.links():
                 linked = True
                 break
-            
+          
         if linked:
             message = 'Are you sure you want to delete "' + self.passage.title + '"?' + \
                       ' Links to it from other passages will become broken.'
@@ -301,6 +308,14 @@ class PassageWidget:
                 gc.DrawText(line, pixPos[0] + inset, excerptTop)
                 excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
                 if excerptTop > (pixPos[1] + pixSize[1]) - inset: break
+
+        # draw a broken link emblem in the bottom right if necessary
+        
+        if len(self.getBrokenLinks()):
+            emblemSize = self.brokenEmblem.GetSize()
+            emblemPos = [ pixSize[0] - emblemSize[0] + inset, pixSize[1] - emblemSize[1] + inset ]
+            print 'drawing broken link emblem on', self
+            gc.DrawBitmap(self.brokenEmblem, emblemPos[0], emblemPos[1], emblemSize[0], emblemSize[1])
             
         # finally, draw a selection over ourselves if we're selected
         

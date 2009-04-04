@@ -112,7 +112,7 @@ class PassageFrame (wx.Frame):
         
         self.titleInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.tagsInput.Bind(wx.EVT_TEXT, self.syncPassage)
-        self.bodyInput.Bind(wx.EVT_TEXT, self.syncPassage)
+        self.bodyInput.Bind(wx.stc.EVT_STC_CHANGE, self.syncPassage)
         self.bodyInput.Bind(wx.stc.EVT_STC_START_DRAG, self.prepDrag)
         self.Bind(wx.EVT_CLOSE, self.closeFullscreen)
         self.Bind(wx.EVT_UPDATE_UI, self.updateUI)
@@ -229,7 +229,6 @@ class PassageFrame (wx.Frame):
         self.bodyInput.InsertText(selStart, '[[')
         self.bodyInput.InsertText(selEnd + 2, ']]')
         self.bodyInput.SetSelection(selStart, selEnd + 4)
-        self.syncPassage()
     
     def updateUI (self, event):
         """Updates menus."""
@@ -242,7 +241,7 @@ class PassageFrame (wx.Frame):
         if selection != '':
             if self.widget.parent.findWidget(selection):
                 if len(selection) < 25:
-                    editSelected.SetText('&Edit "' + selection + '"\tCtrl-L')
+                    editSelected.SetText('&Edit Passage Named "' + selection + '"\tCtrl-L')
                 else:
                     editSelected.SetText('&Edit Selection\tCtrl-L')
             else:
