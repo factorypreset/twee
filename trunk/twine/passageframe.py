@@ -10,7 +10,7 @@
 # they are automatically updated everywhere.
 #
 
-import os, wx, re
+import os, re, wx, wx.stc
 from fseditframe import FullscreenEditFrame
 
 class PassageFrame (wx.Frame):
@@ -94,7 +94,10 @@ class PassageFrame (wx.Frame):
         
         # body text
         
-        self.bodyInput = wx.TextCtrl(self.panel, style = wx.TE_MULTILINE | wx.TE_PROCESS_TAB)
+        self.bodyInput = wx.stc.StyledTextCtrl(self.panel, style = wx.TE_MULTILINE | wx.TE_PROCESS_TAB)
+        self.bodyInput.SetMargins(0, 0)
+        self.bodyInput.SetMarginWidth(1, 0)
+        self.bodyInput.SetWrapMode(wx.stc.STC_WRAP_WORD)
         
         # final layout
         
@@ -111,18 +114,20 @@ class PassageFrame (wx.Frame):
         self.titleInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.tagsInput.Bind(wx.EVT_TEXT, self.syncPassage)
         self.bodyInput.Bind(wx.EVT_TEXT, self.syncPassage)
+        self.bodyInput.Bind(wx.stc.EVT_STC_START_DRAG, self.prepDrag)
         self.Bind(wx.EVT_CLOSE, self.closeFullscreen)
         self.Bind(wx.EVT_UPDATE_UI, self.updateUI)
         
         if not re.match('Untitled Passage \d+', self.widget.passage.title):
             self.bodyInput.SetFocus()
-            self.bodyInput.SetInsertionPoint(self.bodyInput.GetLastPosition())
+            self.bodyInput.SetSelection(-1, -1)
+
         self.Show(True)
 
     def syncInputs (self):
         """Updates the inputs based on the passage's state."""
         self.titleInput.SetValue(self.widget.passage.title)
-        self.bodyInput.SetValue(self.widget.passage.text)
+        self.bodyInput.SetText(self.widget.passage.text)
     
         tags = ''
         
@@ -135,7 +140,7 @@ class PassageFrame (wx.Frame):
     def syncPassage (self, event = None):
         """Updates the passage based on the inputs; asks our matching widget to repaint."""
         self.widget.passage.title = self.titleInput.GetValue()
-        self.widget.passage.text = self.bodyInput.GetValue()
+        self.widget.passage.text = self.bodyInput.GetText()
         self.widget.passage.tags = []
         
         for tag in self.tagsInput.GetValue().split(' '):
@@ -195,10 +200,28 @@ class PassageFrame (wx.Frame):
         self.bodyInput.SetValue(text)
         self.Show(True)
         
+    def prepDrag (self, event):
+        """
+        Tells our StoryPanel about us so that it can tell us what to do in response to
+        dropping some text into it. We also force the event into a copy operation, not
+        a move one, so it doesn't trash any existing text.
+        """
+        event.SetDragAllowMove(False)
+        self.widget.parent.textDragSource = self
+        
     def getSelectionLink (self):
         """Returns the body input's current selection, minus whitespace and other crud."""
-        return self.bodyInput.GetStringSelection().strip(""" "'<>[]""")
-        
+        return self.bodyInput.GetSelectedText().strip(""" "'<>[]""")
+    
+    def linkSelection (self):
+        """Transforms the selection into a link by surrounding it with double brackets."""
+        selStart = self.bodyInput.GetSelectionStart()
+        selEnd = self.bodyInput.GetSelectionEnd()
+        self.bodyInput.InsertText(selStart, '[[')
+        self.bodyInput.InsertText(selEnd + 2, ']]')
+        self.bodyInput.SetSelection(selStart, selEnd + 4)
+        self.syncPassage()
+    
     def updateUI (self, event):
         """Updates menus."""
         
@@ -279,7 +302,8 @@ class PassageFrame (wx.Frame):
         """Applies user prefs to this frame."""
         bodyFont = wx.Font(self.app.config.ReadInt('windowedFontSize'), wx.MODERN, wx.NORMAL, \
                            wx.NORMAL, False, self.app.config.Read('windowedFontFace'))
-        self.bodyInput.SetFont(bodyFont)        
+        defaultStyle = self.bodyInput.GetStyleAt(0)
+        self.bodyInput.StyleSetFont(defaultStyle, bodyFont)
         
     # control constants
     

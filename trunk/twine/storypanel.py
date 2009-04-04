@@ -57,7 +57,8 @@ class StoryPanel (wx.ScrolledWindow):
         self.SetCursor(self.defaultCursor)
 
         # events
-
+        
+        self.SetDropTarget(StoryPanelDropTarget(self))
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: e)
         self.Bind(wx.EVT_PAINT, self.paint)
         self.Bind(wx.EVT_SIZE, self.resize)
@@ -638,3 +639,20 @@ class StoryPanelContext (wx.Menu):
         newPassage = wx.MenuItem(self, wx.NewId(), 'New Passage Here')
         self.AppendItem(newPassage)
         self.Bind(wx.EVT_MENU, lambda e: self.parent.newWidget(pos = pos), id = newPassage.GetId())
+        
+# drag and drop listener
+
+class StoryPanelDropTarget (wx.TextDropTarget):
+    def __init__ (self, panel):
+        wx.TextDropTarget.__init__(self)
+        self.panel = panel
+        
+    def OnDropText (self, x, y, data):
+        # add the new widget
+        
+        self.panel.newWidget(title = data, pos = (x, y))
+        
+        # update the source text with a link
+        # this is set by PassageFrame.prepDrag()
+        
+        self.panel.textDragSource.linkSelection()
