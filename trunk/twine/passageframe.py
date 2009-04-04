@@ -24,6 +24,9 @@ class PassageFrame (wx.Frame):
         # Passage menu
         
         passageMenu = wx.Menu()
+
+        passageMenu.Append(PassageFrame.PASSAGE_EDIT_SELECTION, 'Create &Link From Selection\tCtrl-L')
+        self.Bind(wx.EVT_MENU, self.editSelection, id = PassageFrame.PASSAGE_EDIT_SELECTION)
         
         self.outLinksMenu = wx.Menu()
         self.outLinksMenuTitle = passageMenu.AppendMenu(wx.ID_ANY, 'Outgoing Links', self.outLinksMenu)
@@ -31,10 +34,6 @@ class PassageFrame (wx.Frame):
         self.inLinksMenuTitle = passageMenu.AppendMenu(wx.ID_ANY, 'Incoming Links', self.inLinksMenu)
         self.brokenLinksMenu = wx.Menu()
         self.brokenLinksMenuTitle = passageMenu.AppendMenu(wx.ID_ANY, 'Broken Links', self.brokenLinksMenu)
-
-        passageMenu.Append(PassageFrame.PASSAGE_EDIT_SELECTION, '&Edit Selection\tCtrl-E')
-        self.Bind(wx.EVT_MENU, lambda e: self.openOtherEditor(title = self.getSelectionLink()), \
-                  id = PassageFrame.PASSAGE_EDIT_SELECTION)
 
         passageMenu.AppendSeparator()
         
@@ -213,6 +212,16 @@ class PassageFrame (wx.Frame):
         """Returns the body input's current selection, minus whitespace and other crud."""
         return self.bodyInput.GetSelectedText().strip(""" "'<>[]""")
     
+    def editSelection (self, event = None):
+        """
+        If the selection isn't already double-bracketed, then brackets are added.
+        If a passage with the selection title doesn't exist, it is created.
+        Finally, an editor is opened for the passage.
+        """
+        title = self.getSelectionLink()
+        if not re.match(r'^\[\[.*\]\]$', title): self.linkSelection()
+        self.openOtherEditor(title = title)
+    
     def linkSelection (self):
         """Transforms the selection into a link by surrounding it with double brackets."""
         selStart = self.bodyInput.GetSelectionStart()
@@ -231,13 +240,20 @@ class PassageFrame (wx.Frame):
         selection = self.getSelectionLink()
         
         if selection != '':
-            if len(selection) < 25:
-                editSelected.SetText('Edit "' + selection + '"\tCtrl-E')
+            if self.widget.parent.findWidget(selection):
+                if len(selection) < 25:
+                    editSelected.SetText('&Edit "' + selection + '"\tCtrl-L')
+                else:
+                    editSelected.SetText('&Edit Selection\tCtrl-L')
             else:
-                editSelected.SetText('Edit Selection\tCtrl-E')
+                if len(selection) < 25:
+                    editSelected.SetText('Create &Link Named "' + selection + '"\tCtrl-L')
+                else:
+                    editSelected.SetText('Create &Link From Selection\tCtrl-L')
+
             editSelected.Enable(True)
         else:
-            editSelected.SetText('Edit Selection\tCtrl-E')
+            editSelected.SetText('Create &Link From Selection\tCtrl-L')
             editSelected.Enable(False)
 
     def updateSubmenus (self):
@@ -304,6 +320,9 @@ class PassageFrame (wx.Frame):
                            wx.NORMAL, False, self.app.config.Read('windowedFontFace'))
         defaultStyle = self.bodyInput.GetStyleAt(0)
         self.bodyInput.StyleSetFont(defaultStyle, bodyFont)
+    
+    def __repr__ (self):
+        return "<PassageFrame '" + self.passage.title + "'>"
         
     # control constants
     

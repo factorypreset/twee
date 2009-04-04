@@ -316,6 +316,9 @@ class PassageWidget:
         """Returns a dictionary with state information suitable for pickling."""
         return { 'selected': self.selected, 'pos': self.pos, 'passage': self.passage }
     
+    def __repr__ (self):
+        return "<PassageWidget '" + self.passage.title + "'>"
+    
     MIN_PIXEL_SIZE = 10
     MIN_GREEKING_SIZE = 50
     SIZE = 120

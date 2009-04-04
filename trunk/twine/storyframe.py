@@ -284,6 +284,8 @@ class StoryFrame (wx.Frame):
         If this instance's dirty flag is set, asks the user to confirm that they don't want to save changes.
         """
         
+        print 'checkClose() starting on', self
+        
         if (self.dirty):
             bits = os.path.splitext(self.saveDestination)
             title = os.path.basename(bits[0])
@@ -298,7 +300,10 @@ class StoryFrame (wx.Frame):
         # ask all our widgets to close any editor windows
         
         map(lambda w: w.closeEditor(), self.storyPanel.widgets)
+        self.app.removeStory(self)
         event.Skip()
+        
+        print 'checkClose() ending on', self
 
     def saveAs (self, event = None):
         """Asks the user to choose a file to save state to, then passes off control to save()."""
@@ -567,6 +572,9 @@ class StoryFrame (wx.Frame):
         return { 'target': self.target, 'buildDestination': self.buildDestination, \
                  'saveDestination': self.saveDestination, \
                  'storyPanel': self.storyPanel.serialize() }
+    
+    def __repr__ (self):
+        return "<StoryFrame '" + self.saveDestination + "'>"
     
     # menu constants
     # (that aren't already defined by wx)

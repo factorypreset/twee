@@ -9,12 +9,12 @@ import sys, os, locale, re, pickle, wx
 from storyframe import StoryFrame
 from prefframe import PreferenceFrame
 
-class App:
+class App (wx.App):
 
-    def __init__ (self):
+    def __init__ (self, redirect = False):
         """Initializes the application."""
+        wx.App.__init__(self, redirect = redirect)
         locale.setlocale(locale.LC_ALL, '')
-        self.wxApp = wx.PySimpleApp()
         self.stories = []
         self.loadPrefs()
         
@@ -32,11 +32,17 @@ class App:
         os.chdir(os.path.expanduser('~'))    
            
         self.newStory()
-        self.wxApp.MainLoop()
         
     def newStory (self, event = None):
+        """Opens a new, blank story."""
         self.stories.append(StoryFrame(parent = None, app = self))
-        
+    
+    def removeStory (self, story):
+        """Removes a story from our collection. Should be called when it closes."""
+        self.stories.remove(story)
+        print 'removed', story
+        print 'stories now', self.stories
+    
     def openDialog (self, event = None):
         """Opens a story file of the user's choice."""
         opened = False
@@ -162,4 +168,5 @@ class App:
 # start things up if we were called directly
 
 if __name__ == "__main__":
-    App()
+    app = App()
+    app.MainLoop()

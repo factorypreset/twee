@@ -154,8 +154,8 @@ class Tiddler:
 		else:
 			self.initHtml(source)
 
-	def __unicode__ (self):
-		return self.title
+	def __repr__ (self):
+		return "<Tiddler '" + self.title + "'>"
 
 	def __cmp__ (self, other):
 		"""Compares a Tiddler to another."""
