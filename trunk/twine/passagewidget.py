@@ -310,11 +310,12 @@ class PassageWidget:
                 if excerptTop > (pixPos[1] + pixSize[1]) - inset: break
 
         # draw a broken link emblem in the bottom right if necessary
+        # fixme: not sure how to do this with transparency
         
         if len(self.getBrokenLinks()):
             emblemSize = self.brokenEmblem.GetSize()
-            emblemPos = [ pixSize[0] - emblemSize[0] + inset, pixSize[1] - emblemSize[1] + inset ]
-            print 'drawing broken link emblem on', self
+            emblemPos = [ (pixPos[0] + pixSize[0]) - (emblemSize[0] + inset), \
+                          (pixPos[1] + pixSize[1]) - (emblemSize[1] + inset) ]
             gc.DrawBitmap(self.brokenEmblem, emblemPos[0], emblemPos[1], emblemSize[0], emblemSize[1])
             
         # finally, draw a selection over ourselves if we're selected

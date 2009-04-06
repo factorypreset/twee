@@ -218,9 +218,11 @@ class PassageFrame (wx.Frame):
         If a passage with the selection title doesn't exist, it is created.
         Finally, an editor is opened for the passage.
         """
+        rawSelection = self.bodyInput.GetSelectedText()
         title = self.getSelectionLink()
-        if not re.match(r'^\[\[.*\]\]$', title): self.linkSelection()
+        if not re.match(r'^\[\[.*\]\]$', rawSelection): self.linkSelection()
         self.openOtherEditor(title = title)
+        self.updateSubmenus()
     
     def linkSelection (self):
         """Transforms the selection into a link by surrounding it with double brackets."""
