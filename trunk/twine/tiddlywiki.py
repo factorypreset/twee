@@ -281,8 +281,12 @@ class Tiddler:
 			pubDate = datetime.datetime.now()
 		)
 
-	def links (self):
-		"""Returns a list of all passages linked to by this one."""
+	def links (self, includeExternal = False):
+		"""
+		Returns a list of all passages linked to by this one. By default,
+		only returns internal links, but you can override it with the includeExternal
+		parameter.
+		"""
 
 		# regular hyperlinks
 		
@@ -293,8 +297,14 @@ class Tiddler:
 		def filterPrettyLinks (text):
 			if '|' in text: return re.sub('.*\|', '', text)
 			else: return text
+			
+		# remove external links
+		
+		def isInternalLink (text):
+			return not re.match('http://', text)
 		
 		links = map(filterPrettyLinks, links)
+		if not includeExternal: links = filter(isInternalLink, links)
 
 		# <<display ''>>
 		
