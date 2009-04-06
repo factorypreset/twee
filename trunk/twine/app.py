@@ -145,8 +145,7 @@ class App (wx.App):
         exception = sys.exc_info()
         text = 'An error occurred while ' + activity + ' ('
         text += str(exception[1]) + ').'
-        
-        error = wx.MessageDialog(self, text, 'Error', wx.OK | wx.ICON_ERROR)
+        error = wx.MessageDialog(None, text, 'Error', wx.OK | wx.ICON_ERROR)
         error.ShowModal()
 
     def getPath (self):
