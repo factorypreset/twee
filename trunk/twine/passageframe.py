@@ -54,13 +54,26 @@ class PassageFrame (wx.Frame):
         # Edit menu
         
         editMenu = wx.Menu()
-        editMenu.Append(wx.ID_UNDO, '&Undo\tCtrl-Z')
-        editMenu.AppendSeparator()
-        editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
-        editMenu.Append(wx.ID_COPY, '&Copy\tCtrl-C')
-        editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
         
+        editMenu.Append(wx.ID_UNDO, '&Undo\tCtrl-Z')
+        self.Bind(wx.EVT_MENU, lambda e: self.bodyInput.Undo(), id = wx.ID_UNDO)
+
+        editMenu.Append(wx.ID_REDO, '&Redo\tCtrl-Y')
+        self.Bind(wx.EVT_MENU, lambda e: self.bodyInput.Redo(), id = wx.ID_REDO)
+        
+        editMenu.AppendSeparator()
+        
+        editMenu.Append(wx.ID_CUT, 'Cu&t\tCtrl-X')
+        self.Bind(wx.EVT_MENU, lambda e: self.bodyInput.Cut(), id = wx.ID_CUT)
+
+        editMenu.Append(wx.ID_COPY, '&Copy\tCtrl-C')
+        self.Bind(wx.EVT_MENU, lambda e: self.bodyInput.Copy(), id = wx.ID_COPY)
+        
+        editMenu.Append(wx.ID_PASTE, '&Paste\tCtrl-V')
+        self.Bind(wx.EVT_MENU, lambda e: self.bodyInput.Paste(), id = wx.ID_PASTE)
+
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
+        self.Bind(wx.EVT_MENU, lambda e: self.bodyInput.SelectAll(), id = wx.ID_SELECTALL)
 
         # menus
         
@@ -97,7 +110,9 @@ class PassageFrame (wx.Frame):
         self.bodyInput.SetMargins(0, 0)
         self.bodyInput.SetMarginWidth(1, 0)
         self.bodyInput.SetWrapMode(wx.stc.STC_WRAP_WORD)
-        
+        self.bodyInput.SetSelBackground(True, wx.SystemSettings_GetColour(wx.SYS_COLOUR_HIGHLIGHT))
+        self.bodyInput.SetSelForeground(True, wx.SystemSettings_GetColour(wx.SYS_COLOUR_HIGHLIGHTTEXT))
+                
         # final layout
         
         allSizer.Add(self.topControls, flag = wx.ALL | wx.EXPAND, border = PassageFrame.SPACING)
@@ -105,6 +120,7 @@ class PassageFrame (wx.Frame):
                      border = PassageFrame.SPACING)
         self.applyPrefs()
         self.syncInputs()
+        self.bodyInput.EmptyUndoBuffer()
         self.updateSubmenus()
         
         # event bindings
@@ -115,6 +131,7 @@ class PassageFrame (wx.Frame):
         self.bodyInput.Bind(wx.stc.EVT_STC_CHANGE, self.syncPassage)
         self.bodyInput.Bind(wx.stc.EVT_STC_START_DRAG, self.prepDrag)
         self.Bind(wx.EVT_CLOSE, self.closeFullscreen)
+        self.Bind(wx.EVT_MENU_OPEN, self.updateSubmenus)
         self.Bind(wx.EVT_UPDATE_UI, self.updateUI)
         
         if not re.match('Untitled Passage \d+', self.widget.passage.title):
@@ -146,7 +163,6 @@ class PassageFrame (wx.Frame):
             if tag != '': self.widget.passage.tags.append(tag)
         
         self.SetTitle(self.widget.passage.title + ' - ' + self.app.NAME)
-        self.updateSubmenus()
         self.widget.parent.Refresh()
         self.widget.parent.parent.setDirty(True)
     
@@ -196,7 +212,7 @@ class PassageFrame (wx.Frame):
        
     def setBodyText (self, text):
         """Changes the body text field directly."""
-        self.bodyInput.SetValue(text)
+        self.bodyInput.SetText(text)
         self.Show(True)
         
     def prepDrag (self, event):
@@ -235,6 +251,24 @@ class PassageFrame (wx.Frame):
     def updateUI (self, event):
         """Updates menus."""
         
+        # basic edit menus
+
+        undoItem = self.menus.FindItemById(wx.ID_UNDO)
+        undoItem.Enable(self.bodyInput.CanUndo())
+
+        redoItem = self.menus.FindItemById(wx.ID_REDO)
+        redoItem.Enable(self.bodyInput.CanRedo())
+        
+        hasSelection = self.bodyInput.GetSelectedText() != ''
+        
+        cutItem = self.menus.FindItemById(wx.ID_CUT)
+        cutItem.Enable(hasSelection)
+        copyItem = self.menus.FindItemById(wx.ID_COPY)
+        copyItem.Enable(hasSelection)
+        
+        pasteItem = self.menus.FindItemById(wx.ID_PASTE)
+        pasteItem.Enable(self.bodyInput.CanPaste())
+        
         # edit selection
         
         editSelected = self.menus.FindItemById(PassageFrame.PASSAGE_EDIT_SELECTION)
@@ -257,7 +291,7 @@ class PassageFrame (wx.Frame):
             editSelected.SetText('Create &Link From Selection\tCtrl-L')
             editSelected.Enable(False)
 
-    def updateSubmenus (self):
+    def updateSubmenus (self, event = None):
         """
         Updates our passage menus. This should be called sparingly, i.e. not during
         a UI update event, as it is doing a bunch of removing and adding of items.

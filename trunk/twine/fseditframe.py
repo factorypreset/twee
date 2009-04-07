@@ -18,6 +18,7 @@ class FullscreenEditFrame (wx.Frame):
         self.app = app
         self.callback = callback
         self.frame = frame
+        self.cursorVisible = True
         
         # menu bar
         # this is never seen by the user,
@@ -66,7 +67,9 @@ class FullscreenEditFrame (wx.Frame):
         # events
         
         self.Bind(wx.EVT_KEY_DOWN, self.keyListener)
+        self.Bind(wx.EVT_MOTION, self.showCursor)
         self.editCtrl.Bind(wx.EVT_KEY_DOWN, self.keyListener)
+        self.editCtrl.Bind(wx.EVT_MOTION, self.showCursor)
         
         self.editCtrl.SetFocus()
         self.editCtrl.SetSelection(-1, -1)
@@ -109,6 +112,8 @@ class FullscreenEditFrame (wx.Frame):
     def keyListener (self, event):
         """
         Listens for a key that indicates this frame should close; otherwise lets the event propagate.
+        This also hides the mouse cursor; the showCursor method, bound to the mouse motion event,
+        restores it when the user moves it.
         """
         key = event.GetKeyCode()
         
@@ -119,7 +124,20 @@ class FullscreenEditFrame (wx.Frame):
             self.close()
             self.frame.Destroy()
         
+        self.hideCursor()
         event.Skip()
+        
+    def hideCursor (self, event = None):
+        if self.cursorVisible:
+            self.SetCursor(wx.StockCursor(wx.CURSOR_BLANK))
+            self.editCtrl.SetCursor(wx.StockCursor(wx.CURSOR_BLANK))
+            self.cursorVisible = False
+        
+    def showCursor (self, event = None):
+        if not self.cursorVisible:
+            self.SetCursor(wx.StockCursor(wx.CURSOR_DEFAULT))
+            self.editCtrl.SetCursor(wx.StockCursor(wx.CURSOR_IBEAM))
+            self.cursorVisible = True
         
     DIRECTIONS = 'Press Escape to close this passage, F12 to leave fullscreen.'
     LABEL_FONT_SIZE = 10

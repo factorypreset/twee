@@ -251,6 +251,7 @@ class PassageWidget:
 
         titleFontSize = self.parent.toPixels((PassageWidget.TITLE_SIZE, -1), scaleOnly = True)[0]
         titleFontSize = min(titleFontSize, PassageWidget.MAX_TITLE_SIZE)
+        titleFontSize = max(titleFontSize, PassageWidget.MIN_TITLE_SIZE)
         excerptFontSize = min(titleFontSize * 0.9, PassageWidget.MAX_EXCERPT_SIZE)
         excerptFontSize = max(excerptFontSize, PassageWidget.MIN_EXCERPT_SIZE)
         titleFont = wx.Font(titleFontSize, wx.SWISS, wx.NORMAL, wx.BOLD, False, 'Arial')
@@ -307,7 +308,7 @@ class PassageWidget:
             for line in excerptLines:
                 gc.DrawText(line, pixPos[0] + inset, excerptTop)
                 excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
-                if excerptTop > (pixPos[1] + pixSize[1]) - inset: break
+                if excerptTop + excerptFontHeight > (pixPos[1] + pixSize[1]) - inset: break
 
         # draw a broken link emblem in the bottom right if necessary
         # fixme: not sure how to do this with transparency
@@ -347,8 +348,9 @@ class PassageWidget:
                'excerptText': (0, 0, 0) }
     DIMMED_ALPHA = 0.25
     TITLE_SIZE = 9
+    MIN_TITLE_SIZE = 8
     MAX_TITLE_SIZE = 18
-    MIN_EXCERPT_SIZE = 9
+    MIN_EXCERPT_SIZE = 7
     MAX_EXCERPT_SIZE = 12
     LINE_SPACING = 1.2
     
