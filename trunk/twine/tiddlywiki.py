@@ -325,7 +325,7 @@ def encode_text (text):
 	"""Encodes a string for use in HTML output."""
 	output = text
 	output = output.replace('\\', '\s')
-	output = output.replace('\n', '\\n')
+	output = re.sub(r'\r?\n', r'\\n', output)
 	output = output.replace('<', '&lt;')
 	output = output.replace('>', '&gt;')
 	output = output.replace('"', '&quot;')
