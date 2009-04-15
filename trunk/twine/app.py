@@ -92,8 +92,8 @@ class App (wx.App):
     def about (self, event = None):
         """Shows the about dialog."""
         info = wx.AboutDialogInfo()
-        info.SetName('Twine')
-        info.SetVersion('beta 1')
+        info.SetName(self.NAME)
+        info.SetVersion(self.VERSION)
         info.SetDescription('\nA tool for creating interactive stories\nwritten by Chris Klimas\n\nhttp://gimcrackd.com/etc/src/')
         info.SetCopyright('The Twee compiler and associated JavaScript files in this application are released under the GNU Public License.\n\nThe files in the targets directory are derivative works of Jeremy Ruston\'s TiddlyWiki project and are used under the terms of its license.')
         wx.AboutBox(info)
@@ -162,6 +162,7 @@ class App (wx.App):
         return scriptPath
     
     NAME = 'Twine'
+    VERSION = 'beta 2'
     RECENT_FILES = 5
 
 # start things up if we were called directly
