@@ -90,16 +90,6 @@ class StoryPanel (wx.ScrolledWindow):
         self.resize()
         if not quietly: self.parent.setDirty(True, action = 'New Passage')
         return new
-
-    def removeWidget (self, widget, quietly = False):
-        """
-        Removes a widget from the container. This does not actually delete it from onscreen --
-        see PassageWidget.delete() for that.
-        """
-        if widget.checkDelete():
-            self.widgets.remove(widget)
-            if not quietly: self.parent.setDirty(True, action = 'Delete')
-            self.Refresh()
         
     def snapWidget (self, widget):
         """Snaps a widget to our grid if self.snapping is set."""
@@ -146,7 +136,7 @@ class StoryPanel (wx.ScrolledWindow):
     def cutWidgets (self):
         """Cuts selected widgets into the clipboard."""
         self.copyWidgets()
-        self.eachSelectedWidget(lambda w: self.widgets.remove(w))
+        self.removeWidgets()
         self.Refresh()
         
     def pasteWidgets (self):
@@ -169,6 +159,22 @@ class StoryPanel (wx.ScrolledWindow):
                 
             self.parent.setDirty(True, action = 'Paste')
             self.Refresh()
+            
+    def removeWidgets (self, event = None, saveUndo = False):
+        """
+        Deletes all selected widgets. You can ask this to save an undo state manually,
+        but by default, it doesn't."""
+        
+        toDelete = []
+        
+        for widget in self.widgets:
+            if widget.selected and widget.checkDelete(): toDelete.append(widget)
+        
+        for widget in toDelete: self.widgets.remove(widget)
+        
+        if len(toDelete):
+            self.Refresh()
+            if saveUndo: self.parent.setDirty(True, action = 'Delete')
                             
     def pushUndo (self, action):
         """
