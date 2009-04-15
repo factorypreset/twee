@@ -71,19 +71,12 @@ class StoryPanel (wx.ScrolledWindow):
 
     def newWidget (self, title = None, text = '', pos = None, quietly = False):
         """Adds a new widget to the container."""
-        
-        # have to put this inside the method body
-        
-        if not pos: pos = StoryPanel.INSET
-        
-        # calculate position
-        
-        pos = self.toLogical(pos)
-        
+                        
         # defaults
         
-        if (not title): title = self.untitledName()
-        
+        if not title: title = self.untitledName()
+        if not pos: pos = self.toLogical(StoryPanel.INSET)
+
         new = PassageWidget(self, self.app, title = title, text = text, pos = pos)
         self.widgets.append(new)
         self.Refresh()
@@ -163,8 +156,8 @@ class StoryPanel (wx.ScrolledWindow):
     def removeWidgets (self, event = None, saveUndo = False):
         """
         Deletes all selected widgets. You can ask this to save an undo state manually,
-        but by default, it doesn't."""
-        
+        but by default, it doesn't.
+        """
         toDelete = []
         
         for widget in self.widgets:
@@ -175,7 +168,7 @@ class StoryPanel (wx.ScrolledWindow):
         if len(toDelete):
             self.Refresh()
             if saveUndo: self.parent.setDirty(True, action = 'Delete')
-                            
+        
     def pushUndo (self, action):
         """
         Pushes the current state onto the undo stack. The name parameter describes
