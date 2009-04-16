@@ -74,10 +74,10 @@ class PassageWidget:
         while self.intersectsAny():
             self.pos[0] += self.parent.GRID_SPACING 
             rightEdge = self.pos[0] + PassageWidget.SIZE
-            maxWidth = self.parent.toLogical((self.parent.GetSize().width - self.parent.EXTRA_SPACE, -1), \
+            maxWidth = self.parent.toLogical((self.parent.GetSize().width - self.parent.INSET[0], -1), \
                                              scaleOnly = True)[0]
             if rightEdge > maxWidth:
-                self.pos[0] = originalX
+                self.pos[0] = 10
                 self.pos[1] += self.parent.GRID_SPACING
         
     def getBrokenLinks (self):
@@ -274,16 +274,16 @@ class PassageWidget:
                                                  pixPos[0], pixPos[1] + pixSize[1], \
                                                  frameInterior[0], frameInterior[1]))     
         gc.DrawRectangle(pixPos[0], pixPos[1], pixSize[0] - 1, pixSize[1] - 1)
-                
-        # title bar
-        
-        titleBarHeight = titleFontHeight + (2 * inset)
-        titleBarColor = dim(PassageWidget.COLORS['titleBar'], self.dimmed)
-        gc.SetPen(wx.Pen(titleBarColor, 1))
-        gc.SetBrush(wx.Brush(titleBarColor))
-        gc.DrawRectangle(pixPos[0] + 1, pixPos[1] + 1, pixSize[0] - 3, titleBarHeight)
 
-        if pixSize[0] > PassageWidget.MIN_GREEKING_SIZE:        
+        if pixSize[0] > PassageWidget.MIN_GREEKING_SIZE:
+            # title bar
+            
+            titleBarHeight = titleFontHeight + (2 * inset)
+            titleBarColor = dim(PassageWidget.COLORS['titleBar'], self.dimmed)
+            gc.SetPen(wx.Pen(titleBarColor, 1))
+            gc.SetBrush(wx.Brush(titleBarColor))
+            gc.DrawRectangle(pixPos[0] + 1, pixPos[1] + 1, pixSize[0] - 3, titleBarHeight)            
+
             # draw title
             # we let clipping prevent writing over the frame
             
@@ -309,6 +309,32 @@ class PassageWidget:
                 gc.DrawText(line, pixPos[0] + inset, excerptTop)
                 excerptTop += excerptFontHeight * PassageWidget.LINE_SPACING
                 if excerptTop + excerptFontHeight > (pixPos[1] + pixSize[1]) - inset: break
+        else:
+            # greek title
+            
+            titleBarColor = dim(PassageWidget.COLORS['titleBar'], self.dimmed)
+            gc.SetPen(wx.Pen(titleBarColor, 1))
+            gc.SetBrush(wx.Brush(titleBarColor))
+            gc.DrawRectangle(pixPos[0] + 1, pixPos[1] + 1, pixSize[0] - 3, PassageWidget.GREEK_HEIGHT * 3)
+            
+            gc.SetPen(wx.Pen('#ffffff', PassageWidget.GREEK_HEIGHT))
+            height = pixPos[1] + inset
+            width = pixPos[0] + (pixSize[0] - inset ) / 2
+            gc.StrokeLine(pixPos[0] + inset, height, width, height)
+            height += PassageWidget.GREEK_HEIGHT * 3
+            
+            # greek body text
+            
+            gc.SetPen(wx.Pen('#666666', PassageWidget.GREEK_HEIGHT))
+            
+            while height < (pixPos[1] + pixSize[1]) - inset:
+                width = pixSize[0] - inset
+                
+                if height + (PassageWidget.GREEK_HEIGHT * 2) > (pixPos[1] + pixSize[1]) - inset:
+                    width = width / 2
+                
+                gc.StrokeLine(pixPos[0] + inset, height, pixPos[0] + width, height)
+                height += PassageWidget.GREEK_HEIGHT * 2
 
         # draw a broken link emblem in the bottom right if necessary
         # fixme: not sure how to do this with transparency
@@ -338,6 +364,7 @@ class PassageWidget:
     
     MIN_PIXEL_SIZE = 10
     MIN_GREEKING_SIZE = 50
+    GREEK_HEIGHT = 2
     SIZE = 120
     SHADOW_SIZE = 5
     COLORS = { 'frame': (0, 0, 0), \
