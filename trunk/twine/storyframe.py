@@ -48,8 +48,11 @@ class StoryFrame (wx.Frame):
         
         fileMenu.Append(wx.ID_OPEN, '&Open Story...\tCtrl-O')
         self.Bind(wx.EVT_MENU, self.app.openDialog, id = wx.ID_OPEN)
-
-        fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', self.app.recentFilesMenu)
+        
+        recentFilesMenu = wx.Menu()
+        self.app.recentFiles.UseMenu(recentFilesMenu)
+        self.app.recentFiles.AddFilesToThisMenu(recentFilesMenu)
+        fileMenu.AppendMenu(wx.ID_ANY, 'Open &Recent', recentFilesMenu)
         self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(0), id = wx.ID_FILE1)
         self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(1), id = wx.ID_FILE2)
         self.Bind(wx.EVT_MENU, lambda e: self.app.openRecent(2), id = wx.ID_FILE3)
@@ -283,9 +286,7 @@ class StoryFrame (wx.Frame):
         """
         If this instance's dirty flag is set, asks the user to confirm that they don't want to save changes.
         """
-        
-        print 'checkClose() starting on', self
-        
+                
         if (self.dirty):
             bits = os.path.splitext(self.saveDestination)
             title = os.path.basename(bits[0])
@@ -303,8 +304,6 @@ class StoryFrame (wx.Frame):
         self.app.removeStory(self)
         event.Skip()
         
-        print 'checkClose() ending on', self
-
     def saveAs (self, event = None):
         """Asks the user to choose a file to save state to, then passes off control to save()."""
         dialog = wx.FileDialog(self, 'Save Story As', os.getcwd(), "", \

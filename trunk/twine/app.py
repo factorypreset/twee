@@ -23,9 +23,6 @@ class App (wx.App):
         
         self.recentFiles = wx.FileHistory(App.RECENT_FILES)
         self.recentFiles.Load(self.config)
-        self.recentFilesMenu = wx.Menu()
-        self.recentFiles.UseMenu(self.recentFilesMenu)
-        self.recentFiles.AddFilesToMenu()
         
         # change working directory to the user's home directory
         
@@ -40,9 +37,7 @@ class App (wx.App):
     def removeStory (self, story):
         """Removes a story from our collection. Should be called when it closes."""
         self.stories.remove(story)
-        print 'removed', story
-        print 'stories now', self.stories
-    
+        
     def openDialog (self, event = None):
         """Opens a story file of the user's choice."""
         opened = False
