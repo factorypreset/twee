@@ -224,10 +224,6 @@ class PassageFrame (wx.Frame):
         event.SetDragAllowMove(False)
         self.widget.parent.textDragSource = self
         
-    def getSelectionLink (self):
-        """Returns the body input's current selection, minus whitespace and other crud."""
-        return self.bodyInput.GetSelectedText().strip(""" "'<>[]""")
-    
     def editSelection (self, event = None):
         """
         If the selection isn't already double-bracketed, then brackets are added.
@@ -235,7 +231,7 @@ class PassageFrame (wx.Frame):
         Finally, an editor is opened for the passage.
         """
         rawSelection = self.bodyInput.GetSelectedText()
-        title = self.getSelectionLink()
+        title = self.stripCrud(rawSelection)
         if not re.match(r'^\[\[.*\]\]$', rawSelection): self.linkSelection()
         self.openOtherEditor(title = title)
         self.updateSubmenus()
@@ -247,6 +243,10 @@ class PassageFrame (wx.Frame):
         self.bodyInput.InsertText(selStart, '[[')
         self.bodyInput.InsertText(selEnd + 2, ']]')
         self.bodyInput.SetSelection(selStart, selEnd + 4)
+    
+    def stripCrud (self, text):
+        """Strips extraneous crud from around text, likely a partial selection of a link."""
+        return text.strip(""" "'<>[]""")
     
     def updateUI (self, event):
         """Updates menus."""
@@ -269,26 +269,25 @@ class PassageFrame (wx.Frame):
         pasteItem = self.menus.FindItemById(wx.ID_PASTE)
         pasteItem.Enable(self.bodyInput.CanPaste())
         
-        # edit selection
+        # link selected text menu item
         
         editSelected = self.menus.FindItemById(PassageFrame.PASSAGE_EDIT_SELECTION)
-        selection = self.getSelectionLink()
+        selection = self.bodyInput.GetSelectedText()
         
         if selection != '':
-            if self.widget.parent.findWidget(selection):
-                if len(selection) < 25:
-                    editSelected.SetText('&Edit Passage Named "' + selection + '"\tCtrl-L')
-                else:
-                    editSelected.SetText('&Edit Selection\tCtrl-L')
-            else:
+            if not re.match(r'^\[\[.*\]\]$', selection):
                 if len(selection) < 25:
                     editSelected.SetText('Create &Link Named "' + selection + '"\tCtrl-L')
                 else:
-                    editSelected.SetText('Create &Link From Selection\tCtrl-L')
-
+                    editSelected.SetText('Create &Link From Selected Text\tCtrl-L')
+            else:
+                if len(selection) < 25:
+                    editSelected.SetText('&Edit Passage Named "' + self.stripCrud(selection) + '"\tCtrl-L')
+                else:
+                    editSelected.SetText('&Edit Passage From Selected Text\tCtrl-L')
             editSelected.Enable(True)
         else:
-            editSelected.SetText('Create &Link From Selection\tCtrl-L')
+            editSelected.SetText('Create &Link From Selected Text\tCtrl-L')
             editSelected.Enable(False)
 
     def updateSubmenus (self, event = None):
