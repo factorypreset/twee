@@ -107,7 +107,7 @@ class PassageFrame (wx.Frame):
         # body text
         
         self.bodyInput = wx.stc.StyledTextCtrl(self.panel, style = wx.TE_MULTILINE | wx.TE_PROCESS_TAB)
-        self.bodyInput.SetMargins(0, 0)
+        self.bodyInput.SetMargins(4, 4)
         self.bodyInput.SetMarginWidth(1, 0)
         self.bodyInput.SetWrapMode(wx.stc.STC_WRAP_WORD)
         self.bodyInput.SetSelBackground(True, wx.SystemSettings_GetColour(wx.SYS_COLOUR_HIGHLIGHT))
