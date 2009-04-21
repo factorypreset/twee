@@ -290,7 +290,7 @@ class Tiddler:
 
 		# regular hyperlinks
 		
-		links = re.findall(r'\[\[(.*?)\]\]', self.text)
+		links = re.findall(r'\[\[(.+?)\]\]', self.text)
 	
 		# check for [[title|target]] formats
 
