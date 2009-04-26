@@ -153,6 +153,14 @@ class StoryPanel (wx.ScrolledWindow):
             self.parent.setDirty(True, action = 'Paste')
             self.Refresh()
             
+    def removeWidget (self, widget, saveUndo = False):
+        """
+        Deletes a passed widget. You can ask this to save an undo state manually, 
+        but by default, it doesn't.
+        """
+        self.widgets.remove(widget)
+        if saveUndo: self.parent.setDirty(True, action = 'Delete')
+            
     def removeWidgets (self, event = None, saveUndo = False):
         """
         Deletes all selected widgets. You can ask this to save an undo state manually,
