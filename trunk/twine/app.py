@@ -55,11 +55,20 @@ class App (wx.App):
     
     def open (self, path):
         """Opens a specific story file."""
-        try:
+        try:            
             openedFile = open(path, 'r')
             self.stories.append(StoryFrame(None, app = self, state = pickle.load(openedFile)))
             self.addRecentFile(path)
             openedFile.close()
+            
+            # weird special case:
+            # if we only had one story opened before
+            # and it's pristine (e.g. no changes ever made to it),
+            # then we close it after opening the file successfully
+            
+            if (len(self.stories) == 2) and (self.stories[0].pristine):
+                self.stories[0].Destroy()
+                
         except:
             self.displayError('opening your story')
         
