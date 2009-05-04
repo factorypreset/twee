@@ -6,9 +6,10 @@
 # instance of a StoryPanel, but it also has a menu bar and toolbar.
 #
 
-import wx, os, locale, math, urllib, pickle
+import wx, os, urllib, pickle
 from tiddlywiki import TiddlyWiki
 from storypanel import StoryPanel
+from statisticsdialog import StatisticsDialog
 
 class StoryFrame (wx.Frame):
     
@@ -177,8 +178,8 @@ class StoryFrame (wx.Frame):
         storyMenu.Append(StoryFrame.STORY_PROOF, '&Proof Story...')
         self.Bind(wx.EVT_MENU, self.proof, id = StoryFrame.STORY_PROOF) 
 
-        storyMenu.Append(StoryFrame.STORY_WORD_COUNT, 'Word &Count\tCtrl-I')
-        self.Bind(wx.EVT_MENU, self.wordCount, id = StoryFrame.STORY_WORD_COUNT) 
+        storyMenu.Append(StoryFrame.STORY_STATS, 'Story &Statistics\tCtrl-I')
+        self.Bind(wx.EVT_MENU, self.stats, id = StoryFrame.STORY_STATS) 
         
         storyMenu.AppendSeparator()
 
@@ -391,29 +392,14 @@ class StoryFrame (wx.Frame):
         path = path.replace('file://///', 'file:///')
         wx.LaunchDefaultBrowser(path)        
         
-    def wordCount (self, event = None):
+    def stats (self, event = None):
         """
-        Displays a word count to the user.
+        Displays a StatisticsDialog for this frame.
         """
         
-        # have to do some trickery here because Python doesn't do
-        # closures the way JavaScript does
-        
-        counts = { 'words': 0, 'chars': 0 }
-        
-        def count (widget, counts):
-            counts['chars'] += len(widget.passage.text)
-            counts['words'] += len(widget.passage.text.split(None))
-        
-        self.storyPanel.eachWidget(lambda w: count(w, counts))
-        for key in counts:
-            counts[key] = locale.format('%d', counts[key], grouping = True)
-        
-        message = 'Your story contains ' + str(counts['words']) + ' words and ' + \
-                  str(counts['chars']) + ' characters.'
-        dialog = wx.MessageDialog(self, message, 'Word Count', wx.ICON_INFORMATION | wx.OK)
-        dialog.ShowModal()
-        dialog.Destroy()
+        statFrame = StatisticsDialog(parent = self, storyPanel = self.storyPanel)
+        statFrame.ShowModal()
+        statFrame.Destroy()
 
     def proof (self, event = None):
         """
@@ -592,7 +578,7 @@ class StoryFrame (wx.Frame):
     STORY_BUILD = 403
     STORY_REBUILD = 404
     STORY_VIEW_LAST = 405
-    STORY_WORD_COUNT = 406
+    STORY_STATS = 406
     STORY_PROOF = 407
     
     STORY_FORMAT_SUGARCANE = 408
