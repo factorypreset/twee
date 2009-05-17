@@ -16,7 +16,7 @@
 # coordinates as soon as possible.
 #
 
-import wx, re, rectmath, pickle
+import sys, wx, re, rectmath, pickle
 from passagewidget import PassageWidget
 
 class StoryPanel (wx.ScrolledWindow):
