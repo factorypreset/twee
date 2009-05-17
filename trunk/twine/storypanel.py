@@ -564,7 +564,13 @@ class StoryPanel (wx.ScrolledWindow):
         # we already take into account our scroll origin in our
         # toPixels() method
         
-        gc = wx.GraphicsContext.Create(wx.BufferedPaintDC(self))
+        # OS X already double buffers drawing for us; if we try to do it
+        # ourselves, performance is horrendous
+        
+        if (sys.platform == 'darwin'):
+            gc = wx.GraphicsContext.Create(wx.PaintDC(self))
+        else:
+            gc = wx.GraphicsContext.Create(wx.BufferedPaintDC(self))
         
         # background
         
