@@ -33,4 +33,6 @@ manifestVersion="1.0">
 
 # build the exe
 
-setup( windows = [{ 'script':'app.py', 'other_resources': [(24, 1, manifest)] }])
+setup( windows = [{ 'script':'app.py', \
+                    'icon_resources': [(1, 'icons\\app.ico')], \
+                    'other_resources': [(24, 1, manifest)] }])

@@ -269,6 +269,7 @@ class StoryFrame (wx.Frame):
                                   shortHelp = StoryFrame.ZOOM_ONE_TOOLTIP)
         self.Bind(wx.EVT_TOOL, lambda e: self.storyPanel.zoom(1.0), id = wx.ID_ZOOM_100)
 
+        self.SetIcon(self.app.icon)
         self.showToolbar = True
         self.toolbar.Realize()
         self.Show(True)
@@ -427,7 +428,7 @@ class StoryFrame (wx.Frame):
         Displays a StatisticsDialog for this frame.
         """
         
-        statFrame = StatisticsDialog(parent = self, storyPanel = self.storyPanel)
+        statFrame = StatisticsDialog(parent = self, storyPanel = self.storyPanel, app = self.app)
         statFrame.ShowModal()
         statFrame.Destroy()
 

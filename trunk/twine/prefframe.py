@@ -50,6 +50,7 @@ class PreferenceFrame (wx.Frame):
         panelSizer.Add(self.fsBgColor, flag = wx.BOTTOM | wx.LEFT | wx.RIGHT, border = PreferenceFrame.SPACING)
 
         panelSizer.Fit(self)
+        self.SetIcon(self.app.icon)
         self.Show()
         
     def getPrefFont (self, key):

@@ -138,6 +138,7 @@ class PassageFrame (wx.Frame):
             self.bodyInput.SetFocus()
             self.bodyInput.SetSelection(-1, -1)
 
+        self.SetIcon(self.app.icon)
         self.Show(True)
 
     def syncInputs (self):

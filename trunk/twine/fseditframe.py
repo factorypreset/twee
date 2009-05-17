@@ -74,6 +74,7 @@ class FullscreenEditFrame (wx.Frame):
         
         self.editCtrl.SetFocus()
         self.editCtrl.SetSelection(-1, -1)
+        self.SetIcon(self.app.icon)
         self.Show(True)
         self.ShowFullScreen(True)
 

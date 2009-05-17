@@ -12,7 +12,7 @@ import wx, re, locale
 
 class StatisticsDialog (wx.Dialog):
     
-    def __init__ (self, parent, storyPanel, id = wx.ID_ANY):
+    def __init__ (self, parent, storyPanel, app, id = wx.ID_ANY):
         wx.Dialog.__init__(self, parent, id, title = 'Story Statistics')
         self.storyPanel = storyPanel
         
@@ -63,6 +63,7 @@ class StatisticsDialog (wx.Dialog):
 
         self.count()
         panelSizer.Layout()
+        self.SetIcon(app.icon)
         self.Show()
         
     def count (self):
