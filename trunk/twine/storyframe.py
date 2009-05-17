@@ -73,7 +73,13 @@ class StoryFrame (wx.Frame):
         
         fileMenu.AppendSeparator()
 
-        fileMenu.Append(StoryFrame.FILE_EXPORT_SOURCE, 'E&xport Source Code...')
+        fileMenu.Append(StoryFrame.FILE_EXPORT_PROOF, 'Export &Proofing Copy...')
+        self.Bind(wx.EVT_MENU, self.proof, id = StoryFrame.FILE_EXPORT_PROOF) 
+
+        fileMenu.Append(StoryFrame.FILE_IMPORT_SOURCE, '&Import Source Code...')
+        self.Bind(wx.EVT_MENU, self.importSource, id = StoryFrame.FILE_IMPORT_SOURCE) 
+
+        fileMenu.Append(StoryFrame.FILE_EXPORT_SOURCE, 'Export Source &Code...')
         self.Bind(wx.EVT_MENU, self.exportSource, id = StoryFrame.FILE_EXPORT_SOURCE)
 
         fileMenu.AppendSeparator()
@@ -175,13 +181,8 @@ class StoryFrame (wx.Frame):
 
         storyMenu.AppendSeparator()
 
-        storyMenu.Append(StoryFrame.STORY_PROOF, '&Proof Story...')
-        self.Bind(wx.EVT_MENU, self.proof, id = StoryFrame.STORY_PROOF) 
-
         storyMenu.Append(StoryFrame.STORY_STATS, 'Story &Statistics\tCtrl-I')
         self.Bind(wx.EVT_MENU, self.stats, id = StoryFrame.STORY_STATS) 
-        
-        storyMenu.AppendSeparator()
 
         # Story Format submenu
         
@@ -335,7 +336,37 @@ class StoryFrame (wx.Frame):
                 self.app.displayError('exporting your source code')
 
         dialog.Destroy()
-
+        
+    def importSource (self, event = None):
+        """Asks the user to choose a file to import source from, then imports into the current story."""
+        dialog = wx.FileDialog(self, 'Import Source Code', os.getcwd(), '', \
+                               'Text Files (*.txt)|*.txt|Twee Source Code (*.tw)|*.tw', wx.OPEN | wx.FD_CHANGE_DIR)
+        
+        if dialog.ShowModal() == wx.ID_OK:
+            try:
+                # have a TiddlyWiki object parse it for us
+                
+                source = open(dialog.GetPath(), 'r')
+                tw = TiddlyWiki()
+                tw.addTwee(source.read())
+                source.close()
+                
+                # add passages for each of the tiddlers the TiddlyWiki saw
+                
+                if len(tw.tiddlers):
+                    for t in tw.tiddlers:
+                        tiddler = tw.tiddlers[t]
+                        new = self.storyPanel.newWidget(title = tiddler.title, text = tiddler.text, quietly = True)
+                        new.tags = tiddler.tags
+                    self.setDirty(True, 'Import')
+                else:
+                    dialog = wx.MessageDialog(self, 'No passages were found in this file. Make sure ' + \
+                                              'this is a Twee source file.', 'No Passages Found', \
+                                              wx.ICON_INFO | wx.OK)
+                    dialog.ShowModal()
+            except:
+                self.app.displayError('importing your source code')
+    
     def save (self, event = None):
         if (self.saveDestination == ''):
             self.saveAs()
@@ -365,7 +396,6 @@ class StoryFrame (wx.Frame):
         """
         Builds an HTML version of the story. Pass whether to open the destination file afterwards.
         """
-
         try:
             # open destination for writing
             
@@ -566,8 +596,9 @@ class StoryFrame (wx.Frame):
     
     FILE_PAGE_SETUP = 101       # release 3 :)
     FILE_PRINT = 102            # release 3
-    FILE_IMPORT_SOURCE = 103    # release 2
-    FILE_EXPORT_SOURCE = 104
+    FILE_IMPORT_SOURCE = 103
+    FILE_EXPORT_PROOF = 104
+    FILE_EXPORT_SOURCE = 105
         
     VIEW_SNAP = 301
     VIEW_CLEANUP = 302
@@ -579,7 +610,6 @@ class StoryFrame (wx.Frame):
     STORY_REBUILD = 404
     STORY_VIEW_LAST = 405
     STORY_STATS = 406
-    STORY_PROOF = 407
     
     STORY_FORMAT_SUGARCANE = 408
     STORY_FORMAT_JONAH = 409

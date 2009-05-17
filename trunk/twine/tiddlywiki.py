@@ -72,17 +72,20 @@ class TiddlyWiki:
 		output += r'\margl1440\margr1440\vieww9000\viewh8400\viewkind0' + '\n'
 		output += r'\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx792' + '\n'
 		output += r'\tx8640\ql\qnatural\pardirnatural\pgnx720\pgny720' + '\n'
-
+		
 		# content
 		
 		for i in self.tiddlers:
 			text = self.tiddlers[i].text
+			text = re.sub(r'\n', '\\\n', text) # newlines
 			text = re.sub(r'\[\[(.*?)\]\]', r'\ul \1\ulnone ', text) # links
 			text = re.sub(r'\/\/(.*?)\/\/', r'\i \1\i0 ', text) # italics
 			text = re.sub(r'(\<\<.*?\>\>)', r'\cf1 \i \1\i0 \cf0', text) # macros
 
-			output += r'\fs24\b' + self.tiddlers[i].title + r'\b0\fs20' + '\\\n'
-			output += text + r'\\\n\\\n'
+			output += r'\fs24\b1' + self.tiddlers[i].title + r'\b0\fs20' + '\\\n'
+			output += text + '\\\n\\\n'
+		
+		output += '}'
 			
 		return output
 		
