@@ -26,13 +26,15 @@ class App (wx.App):
         
         # try to load our app icon under win32
         # if it doesn't work, we continue anyway
+
+        self.icon = wx.EmptyIcon()
         
         if sys.platform == 'win32':
             try:
                 self.icon = wx.Icon('icons' + os.sep + 'app.ico', wx.BITMAP_TYPE_ICO)
             except:
-                self.icon = wx.NullIcon()
-        
+                pass
+            
         # change working directory to the user's home directory
         
         os.chdir(os.path.expanduser('~'))    
