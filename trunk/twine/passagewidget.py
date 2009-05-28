@@ -377,7 +377,7 @@ class PassageWidget:
     TITLE_SIZE = 9
     MIN_TITLE_SIZE = 8
     MAX_TITLE_SIZE = 18
-    MIN_EXCERPT_SIZE = 7
+    MIN_EXCERPT_SIZE = 9
     MAX_EXCERPT_SIZE = 12
     LINE_SPACING = 1.2
     
