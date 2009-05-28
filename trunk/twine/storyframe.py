@@ -430,7 +430,6 @@ class StoryFrame (wx.Frame):
         
         statFrame = StatisticsDialog(parent = self, storyPanel = self.storyPanel, app = self.app)
         statFrame.ShowModal()
-        statFrame.Destroy()
 
     def proof (self, event = None):
         """
