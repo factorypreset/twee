@@ -310,7 +310,7 @@ class StoryFrame (wx.Frame):
     def saveAs (self, event = None):
         """Asks the user to choose a file to save state to, then passes off control to save()."""
         dialog = wx.FileDialog(self, 'Save Story As', os.getcwd(), "", \
-                         "Tweepad Story (*.tws)|*.tws", \
+                         "Twine Story (*.tws)|*.tws", \
                            wx.SAVE | wx.FD_OVERWRITE_PROMPT | wx.FD_CHANGE_DIR)
     
         if dialog.ShowModal() == wx.ID_OK:
