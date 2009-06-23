@@ -177,7 +177,7 @@ class App (wx.App):
         return scriptPath
     
     NAME = 'Twine'
-    VERSION = 'beta 2'
+    VERSION = '1.0'
     RECENT_FILES = 5
 
 # start things up if we were called directly
