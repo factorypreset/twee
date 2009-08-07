@@ -24,6 +24,10 @@ class App (wx.App):
         self.recentFiles = wx.FileHistory(App.RECENT_FILES)
         self.recentFiles.Load(self.config)
         
+        # restore save location
+
+        os.chdir(self.config.Read('savePath'))
+        
         # try to load our app icon under win32
         # if it doesn't work, we continue anyway
 
@@ -33,11 +37,7 @@ class App (wx.App):
             try:
                 self.icon = wx.Icon('icons' + os.sep + 'app.ico', wx.BITMAP_TYPE_ICO)
             except:
-                pass
-            
-        # change working directory to the user's home directory
-        
-        os.chdir(os.path.expanduser('~'))    
+                pass    
            
         self.newStory()
         
@@ -135,6 +135,8 @@ class App (wx.App):
         
         monoFont = wx.SystemSettings.GetFont(wx.SYS_ANSI_FIXED_FONT)
         
+        if not self.config.HasEntry('savePath'):
+            self.config.Write('savePath', os.path.expanduser('~'))
         if not self.config.HasEntry('fsTextColor'):
             self.config.Write('fsTextColor', '#afcdff')
         if not self.config.HasEntry('fsBgColor'):

@@ -315,6 +315,7 @@ class StoryFrame (wx.Frame):
     
         if dialog.ShowModal() == wx.ID_OK:
             self.saveDestination = dialog.GetPath()
+            self.app.config.Write('savePath', os.getcwd())
             self.app.addRecentFile(self.saveDestination)
             self.save(None)
         
