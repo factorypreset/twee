@@ -537,7 +537,7 @@ class PassageWidget:
                'excerptText': (0, 0, 0) }
     DIMMED_ALPHA = 0.25
     LINE_SPACING = 1.2
-    CONNECTOR_WIDTH = 2.0
+    CONNECTOR_WIDTH = 1.0
     CONNECTOR_COLOR = '#babdb6'
     ARROWHEAD_LENGTH = 10
     MIN_ARROWHEAD_LENGTH = 5
