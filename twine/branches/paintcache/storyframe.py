@@ -116,7 +116,7 @@ class StoryFrame (wx.Frame):
         self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.removeWidgets(e, saveUndo = True), id = wx.ID_DELETE)
 
         editMenu.Append(wx.ID_SELECTALL, 'Select &All\tCtrl-A')
-        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.selectAll(), id = wx.ID_SELECTALL)
+        self.Bind(wx.EVT_MENU, lambda e: self.storyPanel.eachWidget(lambda i: i.setSelected(True, exclusive = False)), id = wx.ID_SELECTALL)
         
         editMenu.AppendSeparator()
         
@@ -302,7 +302,7 @@ class StoryFrame (wx.Frame):
             self.showToolbar = False
             self.toolbar.Realize()
             self.toolbar.Hide()
-
+            
         self.Show(True)
         
     def revert (self, event = None):

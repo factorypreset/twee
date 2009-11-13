@@ -16,11 +16,11 @@
 # coordinates as soon as possible.
 #
 
-import sys, math, wx, re, pickle, time
+import sys, math, wx, re, pickle
 import geometry
 from passagewidget import PassageWidget
 
-class StoryPanel (wx.ScrolledWindow):
+class StoryPanel (ManuallyScrolledWindow):
 
     def __init__ (self, parent, app, id = wx.ID_ANY, state = None):
         wx.ScrolledWindow.__init__(self, parent, id)
@@ -38,8 +38,7 @@ class StoryPanel (wx.ScrolledWindow):
         self.undoPointer = -1
         self.lastSearchRegexp = None
         self.lastSearchFlags = None
-        self.paintCache = None # see paint() for where this gets inited
-        
+       
         if (state):
             self.scale = state['scale']
             for widget in state['widgets']:
@@ -69,8 +68,9 @@ class StoryPanel (wx.ScrolledWindow):
         self.Bind(wx.EVT_LEFT_DOWN, self.handleClick)
         self.Bind(wx.EVT_LEFT_DCLICK, self.handleDoubleClick)
         self.Bind(wx.EVT_RIGHT_UP, self.handleRightClick)
+        self.Bind(wx.EVT_KEY_DOWN, self.handleKeyDown)
+        self.Bind(wx.EVT_KEY_UP, self.handleKeyUp)
         self.Bind(wx.EVT_MIDDLE_UP, self.handleMiddleClick)
-
 
     def newWidget (self, title = None, text = '', pos = None, quietly = False):
         """Adds a new widget to the container."""
@@ -84,16 +84,13 @@ class StoryPanel (wx.ScrolledWindow):
         new = PassageWidget(self, self.app, title = title, text = text, pos = pos)
         self.widgets.append(new)
         self.snapWidget(new)
-        self.resize()
-        self.refreshPaintCache()
         self.Refresh()
+        self.resize()
         if not quietly: self.parent.setDirty(True, action = 'New Passage')
         return new
         
     def snapWidget (self, widget):
         """Snaps a widget to our grid if self.snapping is set."""
-        dirtyRect = widget.dirtyPixelRect()
-        
         if self.snapping:
             pos = list(widget.pos)
             
@@ -106,7 +103,6 @@ class StoryPanel (wx.ScrolledWindow):
                 pos[coord] += StoryPanel.INSET[coord]
                 
             widget.pos = pos
-            self.refreshPaintCache(dirtyRect.Union(widget.dirtyPixelRect()))
             self.Refresh()
             
     def cleanup (self):
@@ -116,22 +112,12 @@ class StoryPanel (wx.ScrolledWindow):
         self.eachWidget(self.snapWidget)
         self.snapping = oldSnapping
         self.parent.setDirty(True, action = 'Clean Up')
-        self.refreshPaintCache()
         self.Refresh()
 
     def toggleSnapping (self):
         """Toggles whether snapping is on."""
         self.snapping = self.snapping is not True
         self.app.config.WriteBool('storyPanelSnap', self.snapping)
-        
-    def selectAll (self):
-        """
-        Selects all widgets.
-        """
-        for widget in self.widgets:
-            widget.selected = True
-        self.refreshPaintCache()
-        self.Refresh()
         
     def copyWidgets (self):
         """Copies selected widgets into the clipboard."""
@@ -150,6 +136,7 @@ class StoryPanel (wx.ScrolledWindow):
         """Cuts selected widgets into the clipboard."""
         self.copyWidgets()
         self.removeWidgets()
+        self.Refresh()
         
     def pasteWidgets (self):
         """Pastes widgets into the clipboard."""
@@ -162,15 +149,14 @@ class StoryPanel (wx.ScrolledWindow):
             data = pickle.loads(clipData.GetData())
                         
             self.eachWidget(lambda w: w.setSelected(False, False))
-                        
+            
             for widget in data:
                 newPassage = PassageWidget(self, self.app, state = widget)
                 newPassage.findSpace()
                 newPassage.setSelected(True, False)
                 self.widgets.append(newPassage)
-            
+                
             self.parent.setDirty(True, action = 'Paste')
-            self.refreshPaintCache(data)
             self.Refresh()
             
     def removeWidget (self, widget, saveUndo = False):
@@ -180,7 +166,6 @@ class StoryPanel (wx.ScrolledWindow):
         """
         self.widgets.remove(widget)
         if saveUndo: self.parent.setDirty(True, action = 'Delete')
-        self.refreshPaintCache(widget)
         self.Refresh()
             
     def removeWidgets (self, event = None, saveUndo = False):
@@ -192,12 +177,10 @@ class StoryPanel (wx.ScrolledWindow):
         
         for widget in self.widgets:
             if widget.selected and widget.checkDelete(): toDelete.append(widget)
-                
-        for widget in toDelete:
-            self.widgets.remove(widget)
+        
+        for widget in toDelete: self.widgets.remove(widget)
         
         if len(toDelete):
-            self.refreshPaintCache(toDelete)
             self.Refresh()
             if saveUndo: self.parent.setDirty(True, action = 'Delete')
         
@@ -230,7 +213,6 @@ class StoryPanel (wx.ScrolledWindow):
             if self.widgets[i % len(self.widgets)].containsRegexp(regexp, flags):
                 self.widgets[i % len(self.widgets)].setSelected(True)
                 self.scrollToWidget(self.widgets[i % len(self.widgets)])
-                self.refreshPaintCache(self.widgets[i % len(self.widgets)])
                 return
             i += 1
             
@@ -255,7 +237,6 @@ class StoryPanel (wx.ScrolledWindow):
         # widget state, not the passages attached to it
         
         if replacements > 0:
-            self.refreshPaintCache()
             self.Refresh()
             self.parent.setDirty(True, action = 'Replace Across Entire Story')
             
@@ -303,7 +284,6 @@ class StoryPanel (wx.ScrolledWindow):
         for widget in state['widgets']:
             self.widgets.append(PassageWidget(self, self.app, state = widget))
         self.undoPointer -= 1
-        self.refreshPaintCache()
         self.Refresh()
 
     def redo (self):
@@ -334,13 +314,20 @@ class StoryPanel (wx.ScrolledWindow):
         Passes off execution to either startMarquee or startDrag,
         depending on whether the user clicked a widget.
         """
-        # start a drag if the user clicked a widget
+        
+        # if the space bar is down, any click translates to a scroll
+        # (diked out)
+        
+        #if self.scrolling:
+        #    self.startScroll(event)
+        #    return
+        
+        # otherwise, start a drag if the user clicked a widget
         # or a marquee if they didn't
                 
         for widget in self.widgets:
             if widget.getPixelRect().Contains(event.GetPosition()):
                 if not widget.selected: widget.setSelected(True, not event.ShiftDown())
-                self.refreshPaintCache(widget.getPixelRect())
                 self.startDrag(event, widget)
                 return
         self.startMarquee(event)
@@ -366,6 +353,47 @@ class StoryPanel (wx.ScrolledWindow):
         pos.y = pos.y - offset[0]
         self.newWidget(pos = pos)
     
+    def handleKeyDown (self, event):
+        """Switches the cursor to a hand if the space bar is pressed."""
+        # diked out, wxWidgets doesn't seem to let you scroll by pixels
+        # (instead, only scroll units)
+        #
+        #if event.GetKeyCode() == wx.WXK_SPACE:
+        #    self.SetCursor(self.scrollCursor)
+        #    self.scrolling = True
+        event.Skip()
+        
+    def handleKeyUp (self, event):
+        # diked out
+        #
+        #if event.GetKeyCode() == wx.WXK_SPACE:
+        #    self.SetCursor(self.defaultCursor)
+        #    self.scrolling = False
+        event.Skip()
+    
+    def startScroll (self, event):
+        """Starts a scroll action."""
+        self.lastScroll = event.GetPosition()
+        self.Bind(wx.EVT_MOUSE_EVENTS, self.followScroll)
+        self.CaptureMouse()
+        
+    def followScroll (self, event):
+        """
+        Follows the mouse during a scroll. If the user lets go of the space
+        bar, it occurs in a separate event, handled by handleKeyUp.
+        """
+        if event.LeftIsDown():
+            scrollPos = event.GetPosition()
+            scale = self.GetScrollPixelsPerUnit()
+            deltaX = (scrollPos.x - self.lastScroll.x) / scale[0]
+            deltaY = (scrollPos.y - self.lastScroll.y) / scale[1]
+            currentOrigin = self.GetViewStart()
+            self.Scroll(max(currentOrigin[0] - deltaX, 0), max(currentOrigin[1] - deltaY, 0))
+        else:
+            self.scrolling = False
+            self.Bind(wx.EVT_MOUSE_EVENTS, None)
+            self.ReleaseMouse()
+    
     def startMarquee (self, event):
         """Starts a marquee selection."""
         if not self.draggingMarquee:
@@ -376,11 +404,8 @@ class StoryPanel (wx.ScrolledWindow):
             
             # deselect everything
             
-            for widget in self.widgets:
-                if widget.selected:
-                    widget.setSelected(False, False)
-                    self.refreshPaintCache(widget)
-                        
+            map(lambda w: w.setSelected(False, False), self.widgets)
+            
             # grab mouse focus
             
             self.Bind(wx.EVT_MOUSE_EVENTS, self.followMarquee)
@@ -417,15 +442,9 @@ class StoryPanel (wx.ScrolledWindow):
             logicalRect = wx.Rect(logicalOrigin[0], logicalOrigin[1], logicalSize[0], logicalSize[1])
             
             for widget in self.widgets:
-                if widget.intersects(logicalRect):
-                    updateCache = not widget.selected
-                    widget.setSelected(True, False)
-                else:
-                    updateCache = widget.selected
-                    widget.setSelected(False, False)
-                if updateCache: self.refreshPaintCache(widget)
-                    
-            self.Refresh()
+                widget.setSelected(widget.intersects(logicalRect), False)
+            
+            self.Refresh(True, self.oldDirtyRect.Union(self.dragRect))
         else:
             self.draggingMarquee = False
                         
@@ -457,15 +476,11 @@ class StoryPanel (wx.ScrolledWindow):
             # grab mouse focus
             
             self.Bind(wx.EVT_MOUSE_EVENTS, self.followDrag)
-            self.refreshPaintCache(self.oldDirtyRect)
             self.CaptureMouse()
         
     def followDrag (self, event):
         """Follows mouse motions during a widget drag."""
-        print 'followDrag() start'
-        
         if event.LeftIsDown():
-            startTime = time.time()
             self.actuallyDragged = True
             pos = event.GetPosition()
             
@@ -522,8 +537,7 @@ class StoryPanel (wx.ScrolledWindow):
                     dirtyRect = dirtyRect.Union(widget.dirtyPixelRect())
             
             self.oldDirtyRect = dirtyRect
-            self.Refresh(False, self.oldDirtyRect)
-            print "followDrag() done", (time.time() - startTime)
+            self.Refresh(True, dirtyRect)
         else:
             self.draggingWidgets = False
 
@@ -538,13 +552,10 @@ class StoryPanel (wx.ScrolledWindow):
                         break
                     
                 if goodDrag:
-                    update = []
                     self.eachSelectedWidget(lambda w: self.snapWidget(w))
                     self.eachSelectedWidget(lambda w: w.setDimmed(False))
-                    self.eachSelectedWidget(lambda w: update.append(w))
                     self.parent.setDirty(True, action = 'Move')
                     self.resize()
-                    self.refreshPaintCache(tuple(update))
                 else:
                     for widget in self.widgets:
                         if widget.selected:
@@ -554,7 +565,6 @@ class StoryPanel (wx.ScrolledWindow):
             else:
                 # change the selection
                 self.clickedWidget.setSelected(True, not event.ShiftDown())
-                self.refreshPaintCache(self.clickedWidget)
         
             # general cleanup
             
@@ -728,7 +738,6 @@ class StoryPanel (wx.ScrolledWindow):
         origin[1] += scaleDelta * origin[1]
         
         self.resize()
-        self.refreshPaintCache()
         self.Refresh()
         self.Scroll(origin[0], origin[1])
         self.parent.updateUI()
@@ -738,16 +747,6 @@ class StoryPanel (wx.ScrolledWindow):
         # do NOT call self.DoPrepareDC() no matter what the docs may say
         # we already take into account our scroll origin in our
         # toPixels() method
-        
-        print 'paint start'
-        startTime = time.time()
-
-        # we defer initial caching to this point,
-        # when window creation has settled down
-        
-        if not self.paintCache:
-            self.paintCache = wx.MemoryDC()
-            self.refreshPaintCache()
         
         # in fast drawing, we ask for a standard paint context
         # in slow drawing, we ask for a anti-aliased one
@@ -760,29 +759,29 @@ class StoryPanel (wx.ScrolledWindow):
         else:
             gc = wx.BufferedPaintDC(self)
         
-        updateRect = self.GetUpdateRegion().GetBox()
-        x, y = self.CalcUnscrolledPosition(0, 0)
-        width, height = self.GetClientSizeTuple()
-        gc.Blit(0, 0, width, height, self.paintCache, x, y)
-
-        # switch to GraphicsContext now that blittin' is done
-
         if not self.app.config.ReadBool('fastStoryPanel'):
             gc = wx.GraphicsContext.Create(gc)            
-                        
-        # draw any dragged widgets and their connectors
+                       
+        # background
         
-        if self.draggingWidgets:
-            badLinks = []
-            arrowheads = (self.scale > StoryPanel.ARROWHEAD_THRESHOLD)
-
-            for widget in self.widgets:
-                if not widget.selected: continue
-                if widget.dimmed: continue
-                badLinks = widget.paintConnectors(gc, arrowheads, badLinks)
-
-            self.eachSelectedWidget(lambda w: w.paint(gc))
+        updateRect = self.GetUpdateRegion().GetBox()
+        gc.SetBrush(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
+        gc.DrawRectangle(updateRect.x - 1, updateRect.y - 1, updateRect.width + 2, updateRect.height + 2)
                 
+        # connectors
+        
+        badLinks = []
+        arrowheads = (self.scale > StoryPanel.ARROWHEAD_THRESHOLD)
+
+        for widget in self.widgets:
+            if widget.dimmed: continue
+            badLinks = widget.paintConnectors(gc, arrowheads, badLinks)
+            
+        # widgets
+                
+        for widget in self.widgets:
+            if updateRect.Intersects(widget.getPixelRect()): widget.paint(gc)
+        
         # marquee selection
         # with slow drawing, use alpha blending for interior
         
@@ -797,92 +796,7 @@ class StoryPanel (wx.ScrolledWindow):
                 gc.SetBrush(wx.Brush(marqueeColor))
                 
             gc.DrawRectangle(self.dragRect.x, self.dragRect.y, self.dragRect.width, self.dragRect.height)
-
-        print 'paint done', (time.time() - startTime)
-
-    def refreshPaintCache (self, update = None):
-        """
-        Refreshes the paint cache. This normally shouldn't be needed
-        to be called by external classes, as it refreshes the paint
-        cache on its own.
-        
-        This takes an optional parameter that performs an update to
-        only a part of the cache. It may be either a pixel rect, a single
-        widget, or a tuple of widgets. If widgets are passed, then their
-        dirtyPixelRect()s are union'd together. If no parameter is
-        passed, we recreate the entire cache, which can be a very
-        expensive operation.
-        """
-        startTime = time.time()
-        
-        # wait until we are ready to set it up, see paint()
-        
-        if not self.paintCache: return
-        
-        # parse out the update parameter
-        
-        rect = None
-        
-        if update:
-            if isinstance(update, wx.Rect):
-                print "refreshing cache at rect", update
-                rect = update
-            else:
-                if isinstance(update, PassageWidget):
-                    print "refreshing cache for single widget", update
-                    rect = update.dirtyPixelRect()
-                else:
-                    if type(update) == tuple:
-                        print "refreshing cache for multiple widgets", update
-                        for widget in update:
-                            if rect:
-                                rect = rect.Union(widget.dirtyPixelRect())
-                            else:
-                                rect = widget.dirtyPixelRect()
-                    else:
-                        raise Exception("Don't understand update parameter")
-        
-        # if we haven't specified an update rect, then we create
-        # a fresh bitmap and size it appropriately, so
-        # our cache is at least as big as the visible window
-        
-        if not rect:
-            print 'full cache refresh'
-            neededSize = self.toPixels(self.getSize(), scaleOnly = True)
-            windowSize = self.GetVirtualSize()
-            rect = wx.Rect(0, 0, max(neededSize[0], windowSize[0]), max(neededSize[1], windowSize[1]))
-            self.paintCache.SelectObject(wx.NullBitmap)
-            self.paintCache.SelectObject(wx.EmptyBitmap(rect.width, rect.height))
-        
-        if not self.app.config.ReadBool('fastStoryPanel'):
-            gc = wx.GraphicsContext.Create(self.paintCache)
-        else:
-            gc = self.paintCache
-        
-        # paint our background into it
-
-        gc.SetBrush(wx.Brush(StoryPanel.BACKGROUND_COLOR))      
-        gc.DrawRectangle(rect.x, rect.y, rect.width, rect.height)
-        
-        # paint all widgets we aren't dragging, and their connectors
-        
-        arrowheads = (self.scale > StoryPanel.ARROWHEAD_THRESHOLD)
-        badLinks = []
-        
-        if self.draggingWidgets:
-            self.eachSelectedWidget(lambda w: badLinks.append(w))
-
-        for widget in self.widgets:
-            if widget.dimmed: continue
-            badLinks = widget.paintConnectors(gc, arrowheads, badLinks)
-        
-        for widget in self.widgets:
-            if (not self.draggingWidgets or not widget.selected) \
-               and rect.ContainsRect(widget.getPixelRect()):
-                widget.paint(gc)
-                
-        print 'paint cache refresh done', (time.time() - startTime)
-        
+            
     def resize (self, event = None):
         """
         Sets scrollbar settings based on panel size and widgets inside.

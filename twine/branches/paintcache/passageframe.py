@@ -204,13 +204,7 @@ class PassageFrame (wx.Frame):
         # reset redraw timer
         
         def reallySync (self):
-            try:
-                self.widget.parent.Refresh()
-            except:
-                # fails if our window has already closed,
-                # as when the user hits Escape out of a
-                # fullscreen editor, but that's ok
-                pass
+            self.widget.parent.Refresh()
 
         if (self.syncTimer):
             self.syncTimer.cancel()

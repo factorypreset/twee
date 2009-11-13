@@ -232,8 +232,8 @@ class PassageWidget:
         """
         start = self.parent.toPixels(self.getCenter())
         end = self.parent.toPixels(otherWidget.getCenter())
-        start, end = geometry.clipLineByRects([start, end], self.getPixelRect(), otherWidget.getPixelRect())
-         
+        start, end = geometry.clipLineByRects([start, end], otherWidget.getPixelRect())
+                    
         # does it actually need to be drawn?
         
         #if not geometry.lineRectIntersection([start, end], updateRect):
@@ -513,13 +513,16 @@ class PassageWidget:
         top to bottom. A certain amount of slack is assumed here in
         terms of positioning.
         """
-        xDistance = first.pos[0] - second.pos[0]    
-        yDistance = first.pos[1] - second.pos[1]
-        
+        xDistance = int(first.pos[0] - second.pos[0])    
+        yDistance = int(first.pos[1] - second.pos[1])
+                
         if abs(yDistance) > 5:
             return yDistance
         else:
-            return xDistance
+            if xDistance != 0:
+                return xDistance
+            else:
+                return 1 # punt on ties
     
     def __repr__ (self):
         return "<PassageWidget '" + self.passage.title + "'>"
@@ -532,12 +535,12 @@ class PassageWidget:
     COLORS = { 'frame': (0, 0, 0), \
                'bodyStart': (255, 255, 255), \
                'bodyEnd': (228, 228, 226), \
-               'titleBar': (63, 122, 198), \
+               'titleBar': (52, 101, 164), \
                'titleText': (255, 255, 255), \
                'excerptText': (0, 0, 0) }
     DIMMED_ALPHA = 0.25
     LINE_SPACING = 1.2
-    CONNECTOR_WIDTH = 1.0
+    CONNECTOR_WIDTH = 2.0
     CONNECTOR_COLOR = '#babdb6'
     ARROWHEAD_LENGTH = 10
     MIN_ARROWHEAD_LENGTH = 5
