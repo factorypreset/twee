@@ -1,0 +1,8 @@
+*.pyc
+log
+bin
+include
+lib
+src
+.project
+.pydevproject
